@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
@@ -13,6 +13,16 @@ export default function AppLayout({ children }: Props) {
   const isSidebarOpen = useUIStore((s) => s.isSidebarOpen)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
+
+  // 모바일 오버레이 사이드바: ESC 로 닫기 (키보드 접근성)
+  useEffect(() => {
+    if (!isSidebarOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isSidebarOpen, setSidebarOpen])
 
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">

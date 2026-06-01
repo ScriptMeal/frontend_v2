@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
+import StateMessage from '@/components/common/StateMessage'
 import { useStream } from '@/hooks/useStream'
 import { useHistory } from '@/hooks/useHistory'
 import { useSaveFavorite } from '@/hooks/useFavorites'
@@ -59,19 +60,16 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        대화 기록을 불러오는 중…
+      <div className="flex h-full items-center justify-center">
+        <StateMessage variant="loading">대화 기록을 불러오는 중…</StateMessage>
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div
-        role="alert"
-        className="flex h-full items-center justify-center text-sm text-destructive"
-      >
-        대화 기록을 불러오지 못했습니다.
+      <div className="flex h-full items-center justify-center">
+        <StateMessage variant="error">대화 기록을 불러오지 못했습니다.</StateMessage>
       </div>
     )
   }
