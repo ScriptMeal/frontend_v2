@@ -26,18 +26,16 @@ export default function ChatPage() {
 function LiveChat() {
   const history = useSessionStore((s) => s.history)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
-  const pendingMessage = useSessionStore((s) => s.pendingMessage)
-  const clearPendingMessage = useSessionStore((s) => s.clearPendingMessage)
+  const consumePendingMessage = useSessionStore((s) => s.consumePendingMessage)
   const { isStreaming, streamingText, activeTool, error, send } = useStream()
   const onFavorite = useFavoriteHandler(currentSessionId)
 
-  // 홈→채팅 핸드오프: 진입 시 대기 메시지를 캡처해 비운 뒤 1회만 전송
+  // 홈→채팅 핸드오프: 진입 시 대기 메시지를 원자적으로 읽고 비운 뒤 1회만 전송.
+  // StrictMode(개발) 가 effect 를 이중 호출해도 두 번째엔 스토어가 비어 null 을 받아 재전송하지 않는다.
   useEffect(() => {
-    if (!pendingMessage) return
-    const captured = pendingMessage
-    clearPendingMessage()
-    void send(captured)
-  }, [pendingMessage, clearPendingMessage, send])
+    const captured = consumePendingMessage()
+    if (captured) void send(captured)
+  }, [consumePendingMessage, send])
 
   return (
     <ChatView
