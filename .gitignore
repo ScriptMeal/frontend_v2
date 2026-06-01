@@ -13,6 +13,13 @@ dist-ssr
 *.local
 .env
 
+# Claude Code 설정 & 프로젝트 문서 (로컬 전용)
+.claude/
+CLAUDE.md
+DESIGN.md
+PLAN.md
+API_SPEC.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
