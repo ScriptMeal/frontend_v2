@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import FavoriteCard from '@/components/favorites/FavoriteCard'
+import StateMessage from '@/components/common/StateMessage'
 import { useFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
 
@@ -25,22 +26,14 @@ export default function FavoritesPage() {
           <p className="mt-1 text-sm text-muted-foreground">저장한 레시피를 모아봤어요.</p>
         </header>
 
-        {isLoading && (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            불러오는 중…
-          </p>
-        )}
+        {isLoading && <StateMessage variant="loading">불러오는 중…</StateMessage>}
 
         {isError && (
-          <p role="alert" className="py-12 text-center text-sm text-destructive">
-            즐겨찾기를 불러오지 못했습니다.
-          </p>
+          <StateMessage variant="error">즐겨찾기를 불러오지 못했습니다.</StateMessage>
         )}
 
         {!isLoading && !isError && favorites && favorites.length === 0 && (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            아직 저장한 즐겨찾기가 없습니다.
-          </p>
+          <StateMessage variant="empty">아직 저장한 즐겨찾기가 없습니다.</StateMessage>
         )}
 
         {!isLoading && !isError && favorites && favorites.length > 0 && (
