@@ -18,5 +18,12 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // shadcn/cva: 컴포넌트와 함께 변형(variants) export 허용
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true, allowExportNames: ['buttonVariants'] },
+      ],
+    },
   },
 ])

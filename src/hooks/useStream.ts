@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react'
 import { streamChat } from '@/api/chat'
 import { useSessionStore } from '@/store/sessionStore'
 import { saveHistory } from '@/api/user'
-import type { Message } from '@/types'
+import { toolToIntent } from '@/lib/intent'
+import type { Intent, Message } from '@/types'
 
 interface UseStreamReturn {
   isStreaming: boolean
@@ -28,15 +29,16 @@ export function useStream(): UseStreamReturn {
       setActiveTool(null)
 
       let accumulated = ''
+      let intent: Intent = 'OFF_TOPIC'
 
       try {
         for await (const event of streamChat({
           message: userMessage,
           history,
-          session_id: currentSessionId,
         })) {
           if (event.type === 'tool_start') {
             setActiveTool(event.tool ?? null)
+            if (intent === 'OFF_TOPIC') intent = toolToIntent(event.tool)
           } else if (event.type === 'chunk') {
             accumulated += event.value ?? ''
             setStreamingText(accumulated)
@@ -52,7 +54,8 @@ export function useStream(): UseStreamReturn {
             await saveHistory({
               session_id: currentSessionId,
               user_message: userMessage,
-              assistant_reply: accumulated,
+              recipe_reply: accumulated,
+              intent,
             })
           }
         }

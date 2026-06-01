@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -24,7 +24,8 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -65,39 +66,68 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* DESIGN.md 확장 토큰 (shadcn 시맨틱 토큰이 커버하지 못하는 값) */
+@theme {
+  --color-ink: #0c0a09;
+  --color-bg: #fdfcfc;
+  --color-bg-soft: #fafafa;
+  --color-bg-deep: #0c0a09;
+  --color-surface: #ffffff;
+  --color-surface-strong: #f0efed;
+  --color-surface-dark: #0c0a09;
+  --color-surface-dark-elevated: #1c1917;
+  --color-body: #4e4e4e;
+  --color-body-strong: #292524;
+  --color-muted-soft: #a8a29e;
+  --color-hairline: #e7e5e4;
+  --color-hairline-soft: #f0efed;
+  --color-hairline-strong: #d6d3d1;
+  --color-chalk: #e5e5e5;
+  --color-signal: #0447ff;
+  --color-accent-light: #dcfce7;
+  --color-accent-muted: #4ade80;
+
+  /* 그림자 — 1px 들뜸만 (DESIGN.md §6) */
+  --shadow-hairline: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --shadow-lift: 0 1px 1.2px rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* DESIGN.md 라이트 테마 — shadcn 시맨틱 토큰을 디자인 값으로 리스킨 */
+  --background: #fdfcfc; /* bg (Eggshell) */
+  --foreground: #0c0a09; /* ink */
+  --card: #ffffff; /* surface */
+  --card-foreground: #0c0a09;
+  --popover: #ffffff;
+  --popover-foreground: #0c0a09;
+  --primary: #0c0a09; /* Ink Pill */
+  --primary-foreground: #ffffff;
+  --secondary: #f0efed; /* surface-strong */
+  --secondary-foreground: #0c0a09;
+  --muted: #f0efed; /* base-nova 호버 배경 */
+  --muted-foreground: #777169; /* muted */
+  --accent: #16a34a; /* 브랜드 액센트(녹색) — 즐겨찾기·완료·태그 */
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --border: #e7e5e4; /* hairline */
+  --input: #e5e5e5; /* chalk */
+  --ring: #0c0a09; /* 포커스 링 = ink */
+  --chart-1: #16a34a;
+  --chart-2: #4ade80;
+  --chart-3: #777169;
+  --chart-4: #a8a29e;
+  --chart-5: #292524;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #fafafa; /* bg-soft */
+  --sidebar-foreground: #0c0a09;
+  --sidebar-primary: #0c0a09;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0efed; /* 세션 아이템 호버 */
+  --sidebar-accent-foreground: #0c0a09;
+  --sidebar-border: #e7e5e4;
+  --sidebar-ring: #0c0a09;
 }
 
 .dark {
