@@ -30,12 +30,14 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
   const [activeTool, setActiveTool] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { currentSessionId, history, addMessage } = useSessionStore()
+  const { currentSessionId, history, addMessage, addSession } = useSessionStore()
 
   const send = useCallback(
     async (userMessage: string) => {
       // API history 는 "이전 턴"만 — 현재 메시지를 추가하기 전 스냅샷을 캡처
       const historySnapshot = history
+      // 첫 턴이면(이전 기록 없음) 저장 성공 후 사이드바 세션 목록에 등록
+      const isFirstTurn = historySnapshot.length === 0
 
       setIsStreaming(true)
       setError(null)
@@ -70,6 +72,13 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
               recipe_reply: finalReply,
               intent,
             })
+            if (isFirstTurn) {
+              addSession({
+                id: currentSessionId,
+                createdAt: new Date().toISOString(),
+                preview: userMessage,
+              })
+            }
           }
         }
       } catch (err) {
@@ -79,7 +88,7 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
         setActiveTool(null)
       }
     },
-    [currentSessionId, history, addMessage, streamChat, saveHistory],
+    [currentSessionId, history, addMessage, addSession, streamChat, saveHistory],
   )
 
   return { isStreaming, streamingText, activeTool, error, send }

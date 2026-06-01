@@ -6,11 +6,13 @@ import type { Message } from '@/types'
 
 interface Props {
   history: Message[]
-  isStreaming: boolean
-  streamingText: string
-  activeTool: string | null
-  error: string | null
-  onSend: (message: string) => void
+  isStreaming?: boolean
+  streamingText?: string
+  activeTool?: string | null
+  error?: string | null
+  onSend?: (message: string) => void
+  /** 과거 세션 조회 모드 — 입력창 대신 읽기 전용 안내를 보여준다 */
+  readOnly?: boolean
 }
 
 /**
@@ -20,11 +22,12 @@ interface Props {
  */
 export default function ChatView({
   history,
-  isStreaming,
-  streamingText,
-  activeTool,
-  error,
+  isStreaming = false,
+  streamingText = '',
+  activeTool = null,
+  error = null,
   onSend,
+  readOnly = false,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -66,7 +69,13 @@ export default function ChatView({
 
       <div className="border-t border-hairline bg-background">
         <div className="mx-auto w-full max-w-2xl px-4 py-3">
-          <ChatInput onSubmit={onSend} disabled={isStreaming} />
+          {readOnly ? (
+            <p className="py-1.5 text-center text-xs text-muted-foreground">
+              읽기 전용 — 과거 대화입니다. 이어가려면 새 대화를 시작하세요.
+            </p>
+          ) : (
+            <ChatInput onSubmit={onSend ?? (() => {})} disabled={isStreaming} />
+          )}
         </div>
       </div>
     </div>
