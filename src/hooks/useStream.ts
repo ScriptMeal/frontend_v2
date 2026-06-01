@@ -5,7 +5,7 @@ import { saveHistory } from '@/api/user'
 import { toolToIntent } from '@/lib/intent'
 import type { Intent } from '@/types'
 
-interface UseStreamReturn {
+export interface UseStreamReturn {
   isStreaming: boolean
   streamingText: string
   activeTool: string | null

@@ -4,10 +4,12 @@ import { useSessionStore } from '@/store/sessionStore'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const addMessage = useSessionStore((s) => s.addMessage)
+  const setPendingMessage = useSessionStore((s) => s.setPendingMessage)
 
   const handleSubmit = (message: string) => {
-    addMessage({ role: 'user', content: message })
+    // 핸드오프: history 적재는 ChatPage 의 useStream 이 전담한다.
+    // 홈에서는 보낼 메시지만 넘기고 채팅으로 이동한다.
+    setPendingMessage(message)
     navigate('/chat')
   }
 
