@@ -1,8 +1,16 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+// DESIGN.md §8 — 채팅 버블 등장 (y:8→0, opacity 0→1, 0.25s easeOut)
+const bubbleMotion = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.25, ease: 'easeOut' as const },
+}
 
 interface Props {
   role: 'user' | 'assistant'
@@ -49,9 +57,12 @@ export default function ChatBubble({
 
   if (role === 'user') {
     return (
-      <div className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-lg rounded-br-none bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+      <motion.div
+        {...bubbleMotion}
+        className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-lg rounded-br-none bg-primary px-4 py-2.5 text-sm text-primary-foreground"
+      >
         {content}
-      </div>
+      </motion.div>
     )
   }
 
@@ -61,7 +72,10 @@ export default function ChatBubble({
   }
 
   return (
-    <div className="mr-auto flex max-w-[85%] flex-col items-start gap-1">
+    <motion.div
+      {...bubbleMotion}
+      className="mr-auto flex max-w-[85%] flex-col items-start gap-1"
+    >
       <div
         className={cn(
           'w-full rounded-lg rounded-bl-none border border-hairline bg-surface px-4 py-2.5 text-sm text-foreground',
@@ -93,6 +107,6 @@ export default function ChatBubble({
           {saved ? '저장됨' : '즐겨찾기'}
         </button>
       )}
-    </div>
+    </motion.div>
   )
 }

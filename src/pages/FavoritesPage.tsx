@@ -1,6 +1,16 @@
+import { AnimatePresence, motion } from 'framer-motion'
 import FavoriteCard from '@/components/favorites/FavoriteCard'
 import { useFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
+
+// DESIGN.md §8 — 카드 stagger 등장(0.06s) + 삭제 시 fade-out
+const listMotion = {
+  show: { transition: { staggerChildren: 0.06 } },
+}
+const itemMotion = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' as const } },
+}
 
 export default function FavoritesPage() {
   const sessionId = useSessionStore((s) => s.currentSessionId)
@@ -34,15 +44,29 @@ export default function FavoritesPage() {
         )}
 
         {!isLoading && !isError && favorites && favorites.length > 0 && (
-          <div className="flex flex-col gap-4">
-            {favorites.map((favorite) => (
-              <FavoriteCard
-                key={favorite.id}
-                favorite={favorite}
-                onDelete={(id) => deleteFavorite.mutate(id)}
-              />
-            ))}
-          </div>
+          <motion.div
+            className="flex flex-col gap-4"
+            variants={listMotion}
+            initial="hidden"
+            animate="show"
+          >
+            <AnimatePresence>
+              {favorites.map((favorite) => (
+                <motion.div
+                  key={favorite.id}
+                  variants={itemMotion}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  layout
+                >
+                  <FavoriteCard
+                    favorite={favorite}
+                    onDelete={(id) => deleteFavorite.mutate(id)}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </div>
