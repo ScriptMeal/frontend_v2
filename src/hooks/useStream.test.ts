@@ -111,4 +111,28 @@ describe('useStream', () => {
     // 낙관적으로 추가된 user 메시지는 남는다
     expect(useSessionStore.getState().history).toEqual([{ role: 'user', content: 'x' }])
   })
+
+  it('의존성 주입(deps) 시 기본 import 대신 주입된 streamChat·saveHistory 를 쓴다 (DI)', async () => {
+    const injectedStream = vi
+      .fn()
+      .mockReturnValue(makeStream([{ type: 'chunk', value: '주입됨' }, { type: 'done', value: '' }]))
+    const injectedSave = vi.fn().mockResolvedValue(undefined)
+
+    const { result } = renderHook(() =>
+      useStream({ streamChat: injectedStream, saveHistory: injectedSave }),
+    )
+    await act(async () => {
+      await result.current.send('안녕')
+    })
+
+    expect(injectedStream).toHaveBeenCalledOnce()
+    expect(injectedSave).toHaveBeenCalledOnce()
+    // 기본 모듈 mock 은 호출되지 않음
+    expect(mocks.streamChat).not.toHaveBeenCalled()
+    expect(mocks.saveHistory).not.toHaveBeenCalled()
+    expect(useSessionStore.getState().history.at(-1)).toEqual({
+      role: 'assistant',
+      content: '주입됨',
+    })
+  })
 })

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
-import { streamChat } from '@/api/chat'
+import { streamChat as defaultStreamChat } from '@/api/chat'
 import { useSessionStore } from '@/store/sessionStore'
-import { saveHistory } from '@/api/user'
+import { saveHistory as defaultSaveHistory } from '@/api/user'
 import { toolToIntent } from '@/lib/intent'
 import type { Intent } from '@/types'
 
@@ -13,7 +13,18 @@ export interface UseStreamReturn {
   send: (userMessage: string) => Promise<void>
 }
 
-export function useStream(): UseStreamReturn {
+/**
+ * 의존성 주입(선택) — 기본은 실제 API.
+ * mock 스트림으로 UI 를 검증할 때 `useStream({ streamChat: mockStreamChat })` 처럼 주입한다.
+ */
+export interface UseStreamDeps {
+  streamChat?: typeof defaultStreamChat
+  saveHistory?: typeof defaultSaveHistory
+}
+
+export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
+  const streamChat = deps.streamChat ?? defaultStreamChat
+  const saveHistory = deps.saveHistory ?? defaultSaveHistory
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingText, setStreamingText] = useState('')
   const [activeTool, setActiveTool] = useState<string | null>(null)
@@ -68,7 +79,7 @@ export function useStream(): UseStreamReturn {
         setActiveTool(null)
       }
     },
-    [currentSessionId, history, addMessage],
+    [currentSessionId, history, addMessage, streamChat, saveHistory],
   )
 
   return { isStreaming, streamingText, activeTool, error, send }
