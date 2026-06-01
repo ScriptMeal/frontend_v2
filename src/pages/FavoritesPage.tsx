@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import FavoriteCard from '@/components/favorites/FavoriteCard'
 import StateMessage from '@/components/common/StateMessage'
+import AuraBackground from '@/components/common/AuraBackground'
 import { useFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
 
@@ -18,8 +19,11 @@ export default function FavoritesPage() {
   const { data: favorites, isLoading, isError } = useFavorites(sessionId)
   const deleteFavorite = useDeleteFavorite(sessionId)
 
+  const isEmpty = !isLoading && !isError && favorites?.length === 0
+
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="relative isolate h-full overflow-y-auto">
+      {isEmpty && <AuraBackground />}
       <div className="mx-auto w-full max-w-2xl px-4 py-8">
         <header className="mb-6">
           <h1 className="text-display-sm text-foreground">즐겨찾기</h1>
@@ -32,7 +36,7 @@ export default function FavoritesPage() {
           <StateMessage variant="error">즐겨찾기를 불러오지 못했습니다.</StateMessage>
         )}
 
-        {!isLoading && !isError && favorites && favorites.length === 0 && (
+        {isEmpty && (
           <StateMessage variant="empty">아직 저장한 즐겨찾기가 없습니다.</StateMessage>
         )}
 
