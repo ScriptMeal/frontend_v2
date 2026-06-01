@@ -73,6 +73,46 @@ describe('useStream', () => {
     expect(result.current.isStreaming).toBe(false)
   })
 
+  it('첫 턴 저장 성공 시 현재 세션을 첫 user 메시지 preview 로 sessions 에 등록한다 (happy)', async () => {
+    mocks.streamChat.mockReturnValue(
+      makeStream([
+        { type: 'chunk', value: '본문' },
+        { type: 'done', value: '' },
+      ]),
+    )
+
+    const { result } = renderHook(() => useStream())
+    await act(async () => {
+      await result.current.send('떡볶이 먹고 싶어')
+    })
+
+    const { sessions } = useSessionStore.getState()
+    expect(sessions).toHaveLength(1)
+    expect(sessions[0]).toMatchObject({ id: 's1', preview: '떡볶이 먹고 싶어' })
+  })
+
+  it('이전 턴이 있으면(첫 턴이 아니면) 세션을 다시 등록하지 않는다 (edge)', async () => {
+    useSessionStore.setState({
+      history: [
+        { role: 'user', content: '이전' },
+        { role: 'assistant', content: '이전답' },
+      ],
+      sessions: [{ id: 's1', createdAt: '2026-06-01T00:00:00Z', preview: '이전' }],
+    })
+    mocks.streamChat.mockReturnValue(
+      makeStream([{ type: 'chunk', value: '본문' }, { type: 'done', value: '' }]),
+    )
+
+    const { result } = renderHook(() => useStream())
+    await act(async () => {
+      await result.current.send('둘째 질문')
+    })
+
+    const { sessions } = useSessionStore.getState()
+    expect(sessions).toHaveLength(1)
+    expect(sessions[0].preview).toBe('이전')
+  })
+
   it('done.value 가 빈 문자열이면 본문만 저장한다 (edge)', async () => {
     mocks.streamChat.mockReturnValue(
       makeStream([

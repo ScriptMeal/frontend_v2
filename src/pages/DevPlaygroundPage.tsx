@@ -8,6 +8,8 @@ import { useSessionStore } from '@/store/sessionStore'
  * DEV 전용 — 백엔드(localhost:8000) 없이 채팅 UI 로직을 mock 데이터로 확인하는 페이지.
  * 실제 useStream(누적·intent·done·에러 처리) + ChatView 를 그대로 태우고,
  * API 만 mock 으로 주입한다. 라우트: /dev
+ *
+ * 과거 세션 "읽기 전용" 흐름은 사이드바의 시드된 mock 세션(데모 데이터)으로 확인한다.
  */
 export default function DevPlaygroundPage() {
   const history = useSessionStore((s) => s.history)
