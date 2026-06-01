@@ -3,6 +3,7 @@ import ChatBubble from '@/components/chat/ChatBubble'
 import ChatInput from '@/components/chat/ChatInput'
 import ToolIndicator from '@/components/chat/ToolIndicator'
 import StateMessage from '@/components/common/StateMessage'
+import AuraBackground from '@/components/common/AuraBackground'
 import type { Intent, Message } from '@/types'
 
 /** 즐겨찾기할 대화 턴(질문 + 답변 + 의도) */
@@ -45,11 +46,14 @@ export default function ChatView({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [history.length, streamingText, activeTool])
 
+  const isEmptyChat = history.length === 0 && !isStreaming && !error
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative isolate flex h-full flex-col">
+      {isEmptyChat && <AuraBackground />}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
-          {history.length === 0 && !isStreaming && !error && (
+          {isEmptyChat && (
             <StateMessage variant="empty">
               {readOnly
                 ? '저장된 대화가 없습니다.'

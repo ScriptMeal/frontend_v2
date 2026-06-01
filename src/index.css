@@ -23,6 +23,16 @@
 }
 
 /* 접근성 — 모션 최소화 선호 시 모든 전환·애니메이션 무력화 (DESIGN.md §8 / framer는 MotionConfig 처리) */
+/* DESIGN.md §2-5 대기 그라디언트 오브 — AuraBackground 에서만 사용 */
+@layer components {
+  .orb-mint {
+    background: radial-gradient(circle at center, #a7f3d0, #6ee7b7);
+  }
+  .orb-peach {
+    background: radial-gradient(circle at center, #fed7aa, #fca5a5);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
