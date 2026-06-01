@@ -97,10 +97,8 @@ export default function ChatBubble({
           disabled={saved}
           aria-label={saved ? '즐겨찾기에 저장됨' : '즐겨찾기에 저장'}
           className={cn(
-            'flex items-center gap-1 px-1 text-xs transition-colors',
-            saved
-              ? 'text-accent'
-              : 'text-muted-foreground hover:text-accent',
+            'flex items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+            saved ? 'text-accent' : 'text-muted-foreground hover:text-accent',
           )}
         >
           <Star className={cn('size-3.5', saved && 'fill-accent')} />

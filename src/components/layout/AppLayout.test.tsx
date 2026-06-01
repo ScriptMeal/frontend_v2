@@ -50,4 +50,12 @@ describe('AppLayout', () => {
     await user.click(screen.getByLabelText('사이드바 닫기'))
     expect(useUIStore.getState().isSidebarOpen).toBe(false)
   })
+
+  it('사이드바가 열린 상태에서 ESC 로 닫는다 (a11y)', async () => {
+    const user = userEvent.setup()
+    useUIStore.setState({ isSidebarOpen: true })
+    renderLayout()
+    await user.keyboard('{Escape}')
+    expect(useUIStore.getState().isSidebarOpen).toBe(false)
+  })
 })

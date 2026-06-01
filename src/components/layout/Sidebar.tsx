@@ -54,8 +54,9 @@ export default function Sidebar() {
                 <button
                   type="button"
                   onClick={() => handleSelectSession(session.id)}
+                  aria-current={session.id === currentSessionId ? 'true' : undefined}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary',
+                    'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
                     session.id === currentSessionId && 'bg-secondary',
                   )}
                 >
