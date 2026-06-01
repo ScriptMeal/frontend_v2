@@ -62,7 +62,7 @@ describe('useStream', () => {
       { role: 'user', content: '이전' },
       { role: 'assistant', content: '이전답' },
       { role: 'user', content: '떡볶이' },
-      { role: 'assistant', content: finalReply },
+      { role: 'assistant', content: finalReply, intent: 'SPECIFIC_FOOD' },
     ])
     expect(mocks.saveHistory).toHaveBeenCalledExactlyOnceWith({
       session_id: 's1',
@@ -128,7 +128,7 @@ describe('useStream', () => {
 
     expect(useSessionStore.getState().history).toEqual([
       { role: 'user', content: '질문' },
-      { role: 'assistant', content: '본문만' },
+      { role: 'assistant', content: '본문만', intent: 'OFF_TOPIC' },
     ])
     expect(mocks.saveHistory).toHaveBeenCalledWith(
       expect.objectContaining({ recipe_reply: '본문만', intent: 'OFF_TOPIC' }),
@@ -173,6 +173,7 @@ describe('useStream', () => {
     expect(useSessionStore.getState().history.at(-1)).toEqual({
       role: 'assistant',
       content: '주입됨',
+      intent: 'OFF_TOPIC',
     })
   })
 })

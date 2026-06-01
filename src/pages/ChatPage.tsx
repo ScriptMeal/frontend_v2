@@ -1,9 +1,16 @@
 import { useEffect, useMemo } from 'react'
-import ChatView from '@/components/chat/ChatView'
+import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
 import { useStream } from '@/hooks/useStream'
 import { useHistory } from '@/hooks/useHistory'
+import { useSaveFavorite } from '@/hooks/useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
 import { recordToMessages } from '@/lib/recordToMessages'
+
+/** 즐겨찾기 저장 핸들러 — 현재 세션 id 로 턴을 저장한다 */
+function useFavoriteHandler(sessionId: string) {
+  const saveFavorite = useSaveFavorite()
+  return (turn: FavoriteTurn) => saveFavorite.mutate({ session_id: sessionId, ...turn })
+}
 
 export default function ChatPage() {
   const readOnly = useSessionStore((s) => s.readOnly)
@@ -17,9 +24,11 @@ export default function ChatPage() {
 /** 라이브 세션 — 메모리 history + 실시간 스트리밍 */
 function LiveChat() {
   const history = useSessionStore((s) => s.history)
+  const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const pendingMessage = useSessionStore((s) => s.pendingMessage)
   const clearPendingMessage = useSessionStore((s) => s.clearPendingMessage)
   const { isStreaming, streamingText, activeTool, error, send } = useStream()
+  const onFavorite = useFavoriteHandler(currentSessionId)
 
   // 홈→채팅 핸드오프: 진입 시 대기 메시지를 캡처해 비운 뒤 1회만 전송
   useEffect(() => {
@@ -37,6 +46,7 @@ function LiveChat() {
       activeTool={activeTool}
       error={error}
       onSend={send}
+      onFavorite={onFavorite}
     />
   )
 }
@@ -45,6 +55,7 @@ function LiveChat() {
 function ReadOnlyChat({ sessionId }: { sessionId: string }) {
   const { data, isLoading, isError } = useHistory(sessionId)
   const messages = useMemo(() => recordToMessages(data ?? []), [data])
+  const onFavorite = useFavoriteHandler(sessionId)
 
   if (isLoading) {
     return (
@@ -65,5 +76,5 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
     )
   }
 
-  return <ChatView history={messages} readOnly />
+  return <ChatView history={messages} readOnly onFavorite={onFavorite} />
 }

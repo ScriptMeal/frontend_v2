@@ -1,6 +1,7 @@
 import ChatView from '@/components/chat/ChatView'
 import { Button } from '@/components/ui/button'
 import { useStream } from '@/hooks/useStream'
+import { useSaveFavorite } from '@/hooks/useFavorites'
 import { mockStreamChat, mockSaveHistory, mockScenarios } from '@/api/mock/mockChat'
 import { useSessionStore } from '@/store/sessionStore'
 
@@ -13,11 +14,13 @@ import { useSessionStore } from '@/store/sessionStore'
  */
 export default function DevPlaygroundPage() {
   const history = useSessionStore((s) => s.history)
+  const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const startNewSession = useSessionStore((s) => s.startNewSession)
   const { isStreaming, streamingText, activeTool, error, send } = useStream({
     streamChat: mockStreamChat,
     saveHistory: mockSaveHistory,
   })
+  const saveFavorite = useSaveFavorite()
 
   return (
     <div className="flex h-full flex-col">
@@ -65,6 +68,9 @@ export default function DevPlaygroundPage() {
           activeTool={activeTool}
           error={error}
           onSend={send}
+          onFavorite={(turn) =>
+            saveFavorite.mutate({ session_id: currentSessionId, ...turn })
+          }
         />
       </div>
     </div>

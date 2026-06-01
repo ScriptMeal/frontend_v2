@@ -2,7 +2,14 @@ import { useEffect, useRef } from 'react'
 import ChatBubble from '@/components/chat/ChatBubble'
 import ChatInput from '@/components/chat/ChatInput'
 import ToolIndicator from '@/components/chat/ToolIndicator'
-import type { Message } from '@/types'
+import type { Intent, Message } from '@/types'
+
+/** 즐겨찾기할 대화 턴(질문 + 답변 + 의도) */
+export interface FavoriteTurn {
+  user_message: string
+  recipe_reply: string
+  intent: Intent
+}
 
 interface Props {
   history: Message[]
@@ -13,6 +20,8 @@ interface Props {
   onSend?: (message: string) => void
   /** 과거 세션 조회 모드 — 입력창 대신 읽기 전용 안내를 보여준다 */
   readOnly?: boolean
+  /** assistant 버블에 즐겨찾기 버튼을 노출하고, 클릭한 턴을 전달 */
+  onFavorite?: (turn: FavoriteTurn) => void
 }
 
 /**
@@ -28,6 +37,7 @@ export default function ChatView({
   error = null,
   onSend,
   readOnly = false,
+  onFavorite,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -38,13 +48,27 @@ export default function ChatView({
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
-          {history.map((message, index) => (
-            <ChatBubble
-              key={`${message.role}-${index}`}
-              role={message.role}
-              content={message.content}
-            />
-          ))}
+          {history.map((message, index) => {
+            // assistant 턴의 질문은 직전 user 메시지. 즐겨찾기 payload 구성에 쓴다.
+            const favoriteHandler =
+              onFavorite && message.role === 'assistant'
+                ? () =>
+                    onFavorite({
+                      user_message: history[index - 1]?.content ?? '',
+                      recipe_reply: message.content,
+                      intent: message.intent ?? 'OFF_TOPIC',
+                    })
+                : undefined
+
+            return (
+              <ChatBubble
+                key={`${message.role}-${index}`}
+                role={message.role}
+                content={message.content}
+                onFavorite={favoriteHandler}
+              />
+            )
+          })}
 
           {/* 스트리밍 중 임시 assistant 버블 (텍스트가 들어오기 시작하면 표시) */}
           {isStreaming && streamingText && (

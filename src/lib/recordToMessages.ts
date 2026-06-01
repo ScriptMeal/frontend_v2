@@ -10,6 +10,10 @@ import type { Message, RecipeRecord } from '@/types'
 export function recordToMessages(records: RecipeRecord[]): Message[] {
   return [...records].reverse().flatMap((record) => [
     { role: 'user', content: record.user_message } satisfies Message,
-    { role: 'assistant', content: record.recipe_reply } satisfies Message,
+    {
+      role: 'assistant',
+      content: record.recipe_reply,
+      intent: record.intent,
+    } satisfies Message,
   ])
 }
