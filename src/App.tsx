@@ -6,15 +6,8 @@ import HomePage from '@/pages/HomePage'
 import ChatPage from '@/pages/ChatPage'
 import FavoritesPage from '@/pages/FavoritesPage'
 import DevPlaygroundPage from '@/pages/DevPlaygroundPage'
-import { seedDevData } from '@/lib/devSeed'
 
 const queryClient = new QueryClient()
-
-// DEV 전용 — 백엔드 없이 과거 세션 조회 흐름을 시연하기 위한 mock 데이터 시드.
-// 프로덕션 빌드에서는 이 블록이 트리셰이킹된다.
-if (import.meta.env.DEV) {
-  seedDevData(queryClient)
-}
 
 /** 페이지 전환 — 경로별로 opacity 페이드 (DESIGN.md §8, 0.2s easeOut) */
 function AnimatedRoutes() {

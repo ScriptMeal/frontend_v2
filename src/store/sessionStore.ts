@@ -19,10 +19,15 @@ interface SessionState {
   setHistory: (history: Message[]) => void
   addSession: (session: Session) => void
   setPendingMessage: (message: string) => void
-  clearPendingMessage: () => void
+  /**
+   * 대기 메시지를 원자적으로 읽고 즉시 비운다(없으면 null).
+   * 핸드오프 effect 가 StrictMode 로 이중 호출돼도 두 번째 호출은 null 을 받아
+   * 동일 메시지가 두 번 전송되는 것을 막는다(라이브 스토어 값 기준이라 리렌더 타이밍 무관).
+   */
+  consumePendingMessage: () => string | null
 }
 
-export const useSessionStore = create<SessionState>((set) => ({
+export const useSessionStore = create<SessionState>((set, get) => ({
   currentSessionId: generateUUID(),
   history: [],
   sessions: [],
@@ -53,5 +58,9 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   setPendingMessage: (message) => set({ pendingMessage: message }),
 
-  clearPendingMessage: () => set({ pendingMessage: null }),
+  consumePendingMessage: () => {
+    const pending = get().pendingMessage
+    if (pending !== null) set({ pendingMessage: null })
+    return pending
+  },
 }))

@@ -46,3 +46,28 @@ describe('sessionStore — 세션 전환 / 읽기 전용', () => {
     expect(sessions[0].id).toBe('s1')
   })
 })
+
+describe('sessionStore — consumePendingMessage (핸드오프 1회 전송 보장)', () => {
+  it('대기 메시지를 반환하면서 즉시 비운다 (happy)', () => {
+    useSessionStore.setState({ pendingMessage: '떡볶이 먹고 싶어' })
+
+    const msg = useSessionStore.getState().consumePendingMessage()
+
+    expect(msg).toBe('떡볶이 먹고 싶어')
+    expect(useSessionStore.getState().pendingMessage).toBeNull()
+  })
+
+  it('두 번째 호출은 null 을 반환한다 — StrictMode 이중 호출 시 이중 전송 방지 (edge)', () => {
+    useSessionStore.setState({ pendingMessage: '떡볶이 먹고 싶어' })
+
+    const first = useSessionStore.getState().consumePendingMessage()
+    const second = useSessionStore.getState().consumePendingMessage()
+
+    expect(first).toBe('떡볶이 먹고 싶어')
+    expect(second).toBeNull()
+  })
+
+  it('대기 메시지가 없으면 null 을 반환한다 (edge)', () => {
+    expect(useSessionStore.getState().consumePendingMessage()).toBeNull()
+  })
+})
