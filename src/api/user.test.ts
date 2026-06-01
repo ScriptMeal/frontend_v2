@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   post: vi.fn(),
@@ -13,9 +13,15 @@ vi.mock('./client', () => ({
 import { saveHistory, saveFavorite, getHistory, deleteFavorite } from './user'
 
 beforeEach(() => {
+  // favorites 는 DEV 에서 인메모리 mock 으로 분기하므로, 실제 client 계약 검증은 비-DEV 로 고정
+  vi.stubEnv('DEV', false)
   mocks.post.mockReset().mockResolvedValue({ data: {} })
   mocks.get.mockReset().mockResolvedValue({ data: [] })
   mocks.del.mockReset().mockResolvedValue({ data: {} })
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
 })
 
 describe('saveHistory', () => {

@@ -15,11 +15,13 @@ function makeRecord(over: Partial<HistoryRecord>): HistoryRecord {
 }
 
 describe('recordToMessages', () => {
-  it('레코드 1건을 user→assistant 메시지 2건으로 평탄화한다 (happy)', () => {
-    const records = [makeRecord({ user_message: '떡볶이', recipe_reply: '## 떡볶이' })]
+  it('레코드 1건을 user→assistant 메시지 2건으로 평탄화하고 assistant 에 intent 를 담는다 (happy)', () => {
+    const records = [
+      makeRecord({ user_message: '떡볶이', recipe_reply: '## 떡볶이', intent: 'SPECIFIC_FOOD' }),
+    ]
     expect(recordToMessages(records)).toEqual([
       { role: 'user', content: '떡볶이' },
-      { role: 'assistant', content: '## 떡볶이' },
+      { role: 'assistant', content: '## 떡볶이', intent: 'SPECIFIC_FOOD' },
     ])
   })
 
@@ -31,9 +33,9 @@ describe('recordToMessages', () => {
     ]
     expect(recordToMessages(records)).toEqual([
       { role: 'user', content: '첫째' },
-      { role: 'assistant', content: '첫째답' },
+      { role: 'assistant', content: '첫째답', intent: 'OFF_TOPIC' },
       { role: 'user', content: '둘째' },
-      { role: 'assistant', content: '둘째답' },
+      { role: 'assistant', content: '둘째답', intent: 'OFF_TOPIC' },
     ])
   })
 

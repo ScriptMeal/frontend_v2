@@ -53,7 +53,8 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
       try {
         for await (const event of streamChat({
           message: userMessage,
-          history: historySnapshot,
+          // 요청 history 는 role·content 만 전송(intent 등 로컬 메타 제외)
+          history: historySnapshot.map(({ role, content }) => ({ role, content })),
         })) {
           if (event.type === 'tool_start') {
             setActiveTool(event.tool ?? null)
@@ -65,7 +66,7 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
           } else if (event.type === 'done') {
             // 구매 정보(done.value)를 본문 말미에 인라인으로 합침
             const finalReply = accumulated + (event.value ?? '')
-            addMessage({ role: 'assistant', content: finalReply })
+            addMessage({ role: 'assistant', content: finalReply, intent })
             await saveHistory({
               session_id: currentSessionId,
               user_message: userMessage,

@@ -1,6 +1,11 @@
 export interface Message {
   role: 'user' | 'assistant'
   content: string
+  /**
+   * assistant 턴에 한해 저장되는 의도. 즐겨찾기/히스토리 저장 payload 구성에 쓴다.
+   * 채팅 요청(`/api/chat/stream`)의 history 에는 포함하지 않는다(role·content 만 전송).
+   */
+  intent?: Intent
 }
 
 export interface Session {
