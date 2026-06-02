@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { Menu } from 'lucide-react'
+import { PanelLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
 import { useClearSessionsShortcut } from '@/hooks/useClearSessionsShortcut'
@@ -12,7 +12,6 @@ interface Props {
 
 export default function AppLayout({ children }: Props) {
   const isSidebarOpen = useUIStore((s) => s.isSidebarOpen)
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
 
   // Ctrl+Alt+R — 세션 데이터 빠른 초기화(시연용)
@@ -30,40 +29,41 @@ export default function AppLayout({ children }: Props) {
 
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
-      {/* 모바일 백드롭 — 사이드바 열림 시에만, 데스크톱에선 숨김 */}
+      {/* 모바일 백드롭 — 오버레이 열림 시에만(데스크톱은 인-플로우라 불필요) */}
       {isSidebarOpen && (
         <button
           type="button"
           aria-label="사이드바 닫기"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-30 bg-black/20 lg:hidden"
+          className="fixed inset-0 z-30 cursor-pointer bg-black/20 lg:hidden"
         />
       )}
 
-      {/* 사이드바: 데스크톱 고정(static) / 모바일 오버레이(fixed + slide) */}
+      {/* 사이드바: 데스크톱 인-플로우(접으면 width 0) / 모바일 오버레이(fixed + slide) */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 w-[260px] transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          'fixed inset-y-0 left-0 z-40 w-[260px] overflow-hidden transition-[transform,width] duration-200 ease-out lg:static lg:z-auto lg:translate-x-0',
+          isSidebarOpen ? 'translate-x-0 lg:w-[260px]' : '-translate-x-full lg:w-0',
         )}
       >
         <Sidebar />
       </aside>
 
+      {/* 접힘 시 콘텐츠 위에 떠있는 열기 버튼 (화면 크기 무관) */}
+      {!isSidebarOpen && (
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="사이드바 열기"
+          onClick={() => setSidebarOpen(true)}
+          className="fixed left-3 top-3 z-20 bg-background shadow-lift"
+        >
+          <PanelLeft />
+        </Button>
+      )}
+
       {/* 콘텐츠 */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* 모바일 상단바 (데스크톱에선 사이드바가 항상 보이므로 숨김) */}
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-hairline px-3 lg:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="사이드바 열기"
-            onClick={toggleSidebar}
-          >
-            <Menu />
-          </Button>
-          <span className="text-base font-semibold tracking-tight">ScriptMeal</span>
-        </header>
         <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>

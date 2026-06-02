@@ -32,7 +32,7 @@ export default function ChatInput({
   }
 
   return (
-    <div className="flex items-end gap-2 border border-chalk bg-surface p-2 focus-within:outline-2 focus-within:outline-ink">
+    <div className="flex items-end gap-2 rounded-full border border-hairline-strong bg-surface p-2 pl-4">
       <textarea
         value={value}
         onChange={(event) => setValue(event.target.value)}
