@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Plus, Star, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSessionStore } from '@/store/sessionStore'
@@ -6,19 +6,18 @@ import { cn } from '@/lib/utils'
 
 export default function Sidebar() {
   const navigate = useNavigate()
+  const location = useLocation()
   const sessions = useSessionStore((s) => s.sessions)
-  const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const startNewSession = useSessionStore((s) => s.startNewSession)
-  const switchSession = useSessionStore((s) => s.switchSession)
 
   const handleNewChat = () => {
     startNewSession()
     navigate('/')
   }
 
+  // 읽기 전용 세션 진입은 라우팅으로만 처리한다(라이브 store 는 건드리지 않음).
   const handleSelectSession = (id: string) => {
-    switchSession(id)
-    navigate('/chat')
+    navigate(`/chat/${id}`)
   }
 
   return (
@@ -49,22 +48,25 @@ export default function Sidebar() {
           </p>
         ) : (
           <ul className="flex flex-col gap-0.5">
-            {sessions.map((session) => (
+            {sessions.map((session) => {
+              const isActive = location.pathname === `/chat/${session.id}`
+              return (
               <li key={session.id}>
                 <button
                   type="button"
                   onClick={() => handleSelectSession(session.id)}
-                  aria-current={session.id === currentSessionId ? 'true' : undefined}
+                  aria-current={isActive ? 'true' : undefined}
                   className={cn(
                     'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
-                    session.id === currentSessionId && 'bg-secondary',
+                    isActive && 'bg-secondary',
                   )}
                 >
                   <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
                   <span className="truncate">{session.preview ?? '새 대화'}</span>
                 </button>
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </nav>

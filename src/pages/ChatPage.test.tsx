@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactElement } from 'react'
 import type { UseStreamReturn } from '@/hooks/useStream'
+import type { RecipeRecord } from '@/types'
 
 const mocks = vi.hoisted(() => ({
   send: vi.fn(),
@@ -12,6 +13,11 @@ const mocks = vi.hoisted(() => ({
     streamingText: '',
     activeTool: null as string | null,
     error: null as string | null,
+  },
+  history: {
+    data: [] as RecipeRecord[],
+    isLoading: false,
+    isError: false,
   },
 }))
 
@@ -25,6 +31,11 @@ vi.mock('@/hooks/useStream', () => ({
   }),
 }))
 
+// 읽기 전용 모드는 useHistory 로 기록을 로드한다 — 라이브 테스트에선 호출되지 않는다.
+vi.mock('@/hooks/useHistory', () => ({
+  useHistory: () => mocks.history,
+}))
+
 import ChatPage from './ChatPage'
 import { useSessionStore } from '@/store/sessionStore'
 
@@ -32,14 +43,25 @@ function setStream(partial: Partial<typeof mocks.state>) {
   Object.assign(mocks.state, partial)
 }
 
-function renderWithClient(ui: ReactElement) {
+/** 라우트 컨텍스트와 함께 렌더 — `/chat`(라이브) / `/chat/:sessionId`(읽기 전용) 분기 검증용 */
+function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:sessionId" element={<ChatPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
 }
 
 beforeEach(() => {
   mocks.send.mockReset().mockResolvedValue(undefined)
   setStream({ isStreaming: false, streamingText: '', activeTool: null, error: null })
+  mocks.history = { data: [], isLoading: false, isError: false }
   useSessionStore.setState({
     currentSessionId: 's1',
     history: [],
@@ -48,16 +70,16 @@ beforeEach(() => {
   })
 })
 
-describe('ChatPage', () => {
+describe('ChatPage — 라이브 (/chat)', () => {
   it('진입 시 pendingMessage 가 있으면 1회 send 후 비운다 (happy)', () => {
     useSessionStore.setState({ pendingMessage: '떡볶이 먹고 싶어' })
-    renderWithClient(<ChatPage />)
+    renderAt('/chat')
     expect(mocks.send).toHaveBeenCalledExactlyOnceWith('떡볶이 먹고 싶어')
     expect(useSessionStore.getState().pendingMessage).toBeNull()
   })
 
   it('pendingMessage 가 없으면 진입 시 자동 전송하지 않는다 (edge)', () => {
-    renderWithClient(<ChatPage />)
+    renderAt('/chat')
     expect(mocks.send).not.toHaveBeenCalled()
   })
 
@@ -68,21 +90,21 @@ describe('ChatPage', () => {
         { role: 'assistant', content: '## 안녕하세요' },
       ],
     })
-    renderWithClient(<ChatPage />)
+    renderAt('/chat')
     expect(screen.getByText('안녕')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '안녕하세요' })).toBeInTheDocument()
   })
 
   it('스트리밍 중이면 streamingText 임시 버블과 ToolIndicator 를 표시한다', () => {
     setStream({ isStreaming: true, streamingText: '## 떡', activeTool: 'get_diet_products' })
-    renderWithClient(<ChatPage />)
+    renderAt('/chat')
     expect(screen.getByText(/관련 다이어트 제품 검색 중/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '떡' })).toBeInTheDocument()
   })
 
   it('하단 입력창 전송 시 send 를 호출한다', async () => {
     const user = userEvent.setup()
-    renderWithClient(<ChatPage />)
+    renderAt('/chat')
     await user.type(screen.getByLabelText('메시지 입력'), '두부 요리')
     await user.click(screen.getByRole('button', { name: '전송' }))
     expect(mocks.send).toHaveBeenCalledWith('두부 요리')
@@ -90,7 +112,34 @@ describe('ChatPage', () => {
 
   it('스트리밍 중에는 입력창을 비활성화한다', () => {
     setStream({ isStreaming: true })
-    renderWithClient(<ChatPage />)
+    renderAt('/chat')
     expect(screen.getByLabelText('메시지 입력')).toBeDisabled()
+  })
+})
+
+describe('ChatPage — 읽기 전용 (/chat/:sessionId)', () => {
+  it('URL 의 세션 기록을 읽기 전용으로 렌더하고 입력창을 노출하지 않는다 (happy)', () => {
+    mocks.history.data = [
+      {
+        id: 1,
+        session_id: 's1',
+        user_message: '안녕',
+        recipe_reply: '## 안녕하세요',
+        intent: 'OFF_TOPIC',
+        created_at: '2026-06-02T00:00:00Z',
+      },
+    ]
+    renderAt('/chat/s1')
+
+    expect(screen.getByText('안녕')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '안녕하세요' })).toBeInTheDocument()
+    expect(screen.getByText(/읽기 전용/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('메시지 입력')).not.toBeInTheDocument()
+  })
+
+  it('자동 전송(send)을 하지 않는다 (edge)', () => {
+    useSessionStore.setState({ pendingMessage: '떡볶이' })
+    renderAt('/chat/s1')
+    expect(mocks.send).not.toHaveBeenCalled()
   })
 })

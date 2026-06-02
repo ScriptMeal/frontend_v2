@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useParams } from 'react-router-dom'
 import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
 import StateMessage from '@/components/common/StateMessage'
 import { useStream } from '@/hooks/useStream'
@@ -14,11 +15,11 @@ function useFavoriteHandler(sessionId: string) {
 }
 
 export default function ChatPage() {
-  const readOnly = useSessionStore((s) => s.readOnly)
-  const currentSessionId = useSessionStore((s) => s.currentSessionId)
-
+  // 모드는 URL 로 판정한다: `/chat/:sessionId` 면 읽기 전용, `/chat` 이면 라이브.
   // 훅 호출 규칙상 모드별로 컴포넌트를 분리한다(조건부 훅 호출 금지).
-  if (readOnly) return <ReadOnlyChat sessionId={currentSessionId} />
+  const { sessionId } = useParams<{ sessionId?: string }>()
+
+  if (sessionId) return <ReadOnlyChat sessionId={sessionId} />
   return <LiveChat />
 }
 
