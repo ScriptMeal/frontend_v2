@@ -22,4 +22,9 @@ describe('ToolIndicator', () => {
     render(<ToolIndicator tool="unknown_tool" />)
     expect(screen.getByText(/응답 생성 중/)).toBeInTheDocument()
   })
+
+  it('tool 이 없으면(send 직후) 기본 생성 중 문구를 표시한다 (edge)', () => {
+    render(<ToolIndicator tool={null} />)
+    expect(screen.getByText(/응답 생성 중/)).toBeInTheDocument()
+  })
 })
