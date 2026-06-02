@@ -88,8 +88,8 @@ export default function ChatView({
             <ChatBubble role="assistant" content={streamingText} isStreaming />
           )}
 
-          {/* 텍스트 도착 전 툴 실행 단계 표시 */}
-          {isStreaming && activeTool && <ToolIndicator tool={activeTool} />}
+          {/* 텍스트 도착 전 로딩 표시 — send 직후(툴 없음)부터 툴 실행 단계까지 */}
+          {isStreaming && !streamingText && <ToolIndicator tool={activeTool} />}
 
           {error && (
             <div

@@ -95,11 +95,24 @@ describe('ChatPage — 라이브 (/chat)', () => {
     expect(screen.getByRole('heading', { name: '안녕하세요' })).toBeInTheDocument()
   })
 
-  it('스트리밍 중이면 streamingText 임시 버블과 ToolIndicator 를 표시한다', () => {
-    setStream({ isStreaming: true, streamingText: '## 떡', activeTool: 'get_diet_products' })
+  it('send 직후(텍스트·툴 없음)엔 기본 로딩 인디케이터를 표시한다 (happy)', () => {
+    setStream({ isStreaming: true, streamingText: '', activeTool: null })
+    renderAt('/chat')
+    expect(screen.getByText(/응답 생성 중/)).toBeInTheDocument()
+  })
+
+  it('툴 단계(텍스트 전, 툴 있음)엔 툴 문구를 표시한다', () => {
+    setStream({ isStreaming: true, streamingText: '', activeTool: 'get_diet_products' })
     renderAt('/chat')
     expect(screen.getByText(/관련 다이어트 제품 검색 중/)).toBeInTheDocument()
+  })
+
+  it('텍스트가 도착하면 스트리밍 버블을 보이고 인디케이터는 숨긴다 (edge)', () => {
+    setStream({ isStreaming: true, streamingText: '## 떡', activeTool: null })
+    renderAt('/chat')
     expect(screen.getByRole('heading', { name: '떡' })).toBeInTheDocument()
+    expect(screen.queryByText(/응답 생성 중/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/검색 중/)).not.toBeInTheDocument()
   })
 
   it('하단 입력창 전송 시 send 를 호출한다', async () => {
