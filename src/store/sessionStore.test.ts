@@ -2,18 +2,18 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useSessionStore } from './sessionStore'
 
 beforeEach(() => {
+  localStorage.clear()
   useSessionStore.setState({
     currentSessionId: 'init',
     history: [],
     sessions: [],
     pendingMessage: null,
-    readOnly: false,
   })
 })
 
-describe('sessionStore — 세션 전환 / 읽기 전용', () => {
-  it('startNewSession 은 새 id·빈 history·readOnly 해제로 라이브 세션을 연다 (happy)', () => {
-    useSessionStore.setState({ readOnly: true, history: [{ role: 'user', content: 'x' }] })
+describe('sessionStore — 새 세션', () => {
+  it('startNewSession 은 새 id·빈 history 로 라이브 세션을 연다 (happy)', () => {
+    useSessionStore.setState({ history: [{ role: 'user', content: 'x' }] })
     const prevId = useSessionStore.getState().currentSessionId
 
     useSessionStore.getState().startNewSession()
@@ -21,19 +21,7 @@ describe('sessionStore — 세션 전환 / 읽기 전용', () => {
     const s = useSessionStore.getState()
     expect(s.currentSessionId).not.toBe(prevId)
     expect(s.history).toEqual([])
-    expect(s.readOnly).toBe(false)
     expect(s.pendingMessage).toBeNull()
-  })
-
-  it('switchSession 은 과거 세션을 읽기 전용으로 연다 (history 비우고 readOnly 설정) (happy)', () => {
-    useSessionStore.setState({ history: [{ role: 'user', content: 'live' }] })
-
-    useSessionStore.getState().switchSession('past-1')
-
-    const s = useSessionStore.getState()
-    expect(s.currentSessionId).toBe('past-1')
-    expect(s.readOnly).toBe(true)
-    expect(s.history).toEqual([])
   })
 
   it('addSession 은 세션을 최신순으로 추가하고 같은 id 를 중복하지 않는다 (edge)', () => {
@@ -44,6 +32,52 @@ describe('sessionStore — 세션 전환 / 읽기 전용', () => {
     const { sessions } = useSessionStore.getState()
     expect(sessions).toHaveLength(1)
     expect(sessions[0].id).toBe('s1')
+  })
+})
+
+describe('sessionStore — localStorage 영속화 (persist)', () => {
+  it('addSession 결과가 localStorage 에 저장된다 (happy)', () => {
+    useSessionStore
+      .getState()
+      .addSession({ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: '떡볶이' })
+
+    const raw = localStorage.getItem('scriptmeal-sessions')
+    expect(raw).toBeTruthy()
+    const parsed = JSON.parse(raw!)
+    expect(parsed.state.sessions).toEqual([
+      { id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: '떡볶이' },
+    ])
+  })
+
+  it('sessions 만 persist 하고 history·currentSessionId 는 저장하지 않는다 (partialize, edge)', () => {
+    useSessionStore.setState({
+      currentSessionId: 'live-xyz',
+      history: [{ role: 'user', content: 'hi' }],
+    })
+    useSessionStore
+      .getState()
+      .addSession({ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p' })
+
+    const parsed = JSON.parse(localStorage.getItem('scriptmeal-sessions')!)
+    expect(Object.keys(parsed.state)).toEqual(['sessions'])
+  })
+
+  it('localStorage 에 저장된 세션을 rehydrate 후 복원한다 (새로고침 시나리오, happy)', async () => {
+    localStorage.setItem(
+      'scriptmeal-sessions',
+      JSON.stringify({
+        state: {
+          sessions: [{ id: 'restored', createdAt: '2026-06-02T00:00:00Z', preview: '복원됨' }],
+        },
+        version: 0,
+      }),
+    )
+
+    await useSessionStore.persist.rehydrate()
+
+    expect(useSessionStore.getState().sessions).toEqual([
+      { id: 'restored', createdAt: '2026-06-02T00:00:00Z', preview: '복원됨' },
+    ])
   })
 })
 

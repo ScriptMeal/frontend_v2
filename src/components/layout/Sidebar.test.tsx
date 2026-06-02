@@ -56,7 +56,7 @@ describe('Sidebar', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/favorites')
   })
 
-  it('세션 목록이 있으면 항목을 렌더링하고 클릭 시 전환·이동한다 (happy)', async () => {
+  it('세션 목록이 있으면 항목을 렌더링하고 클릭 시 해당 세션 경로로 이동한다 (happy)', async () => {
     const user = userEvent.setup()
     useSessionStore.setState({
       sessions: [
@@ -65,7 +65,6 @@ describe('Sidebar', () => {
     })
     renderSidebar()
     await user.click(screen.getByRole('button', { name: /떡볶이 레시피/ }))
-    expect(useSessionStore.getState().currentSessionId).toBe('s1')
-    expect(mockNavigate).toHaveBeenCalledWith('/chat')
+    expect(mockNavigate).toHaveBeenCalledWith('/chat/s1')
   })
 })

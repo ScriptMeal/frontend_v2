@@ -25,7 +25,9 @@ function AnimatedRoutes() {
         {/* location 을 고정해 전환 중 exit 페이지가 이전 라우트를 유지하도록 한다 */}
         <Routes location={location}>
           <Route path="/" element={<HomePage />} />
+          {/* /chat = 라이브 세션, /chat/:sessionId = 과거 세션 읽기 전용 열람 */}
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:sessionId" element={<ChatPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
           {/* DEV 전용 — mock 데이터로 채팅 UI 확인 (/dev) */}
           <Route path="/dev" element={<DevPlaygroundPage />} />
