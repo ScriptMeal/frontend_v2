@@ -4,6 +4,9 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseRecipeReply } from '@/lib/parseRecipeReply'
+import WeatherHeader from '@/components/chat/WeatherHeader'
+import PurchaseInfo from '@/components/chat/PurchaseInfo'
 
 // DESIGN.md §8 — 채팅 버블 등장 (y:8→0, opacity 0→1, 0.25s easeOut)
 const bubbleMotion = {
@@ -71,6 +74,9 @@ export default function ChatBubble({
     setSaved(true)
   }
 
+  // 날씨 헤더(📅)·구매 정보(🛒)를 본문에서 분리 — 마커 없으면 body == content
+  const { weather, body, purchase } = parseRecipeReply(content)
+
   return (
     <motion.div
       {...bubbleMotion}
@@ -84,9 +90,13 @@ export default function ChatBubble({
         )}
       >
         <div className="flex flex-col gap-2">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-            {content}
-          </ReactMarkdown>
+          {weather && <WeatherHeader weather={weather} />}
+          {body && (
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              {body}
+            </ReactMarkdown>
+          )}
+          {purchase.length > 0 && <PurchaseInfo items={purchase} />}
         </div>
       </div>
 
@@ -97,7 +107,7 @@ export default function ChatBubble({
           disabled={saved}
           aria-label={saved ? '즐겨찾기에 저장됨' : '즐겨찾기에 저장'}
           className={cn(
-            'flex items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+            'flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-default',
             saved ? 'text-accent' : 'text-muted-foreground hover:text-accent',
           )}
         >
