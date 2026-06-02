@@ -1,7 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Plus, Star, MessageSquare } from 'lucide-react'
+import { Plus, Star, MessageSquare, PanelLeftClose } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSessionStore } from '@/store/sessionStore'
+import { useUIStore } from '@/store/uiStore'
 import { cn } from '@/lib/utils'
 
 export default function Sidebar() {
@@ -9,6 +10,7 @@ export default function Sidebar() {
   const location = useLocation()
   const sessions = useSessionStore((s) => s.sessions)
   const startNewSession = useSessionStore((s) => s.startNewSession)
+  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
 
   const handleNewChat = () => {
     startNewSession()
@@ -22,11 +24,19 @@ export default function Sidebar() {
 
   return (
     <div className="flex h-full flex-col border-r border-hairline bg-sidebar">
-      {/* 브랜드 */}
-      <div className="flex h-14 shrink-0 items-center px-4">
+      {/* 브랜드 + 접기 */}
+      <div className="flex h-14 shrink-0 items-center justify-between px-4">
         <span className="text-base font-semibold tracking-tight text-foreground">
           ScriptMeal
         </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="사이드바 접기"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <PanelLeftClose />
+        </Button>
       </div>
 
       {/* 새 대화 */}
@@ -57,7 +67,7 @@ export default function Sidebar() {
                   onClick={() => handleSelectSession(session.id)}
                   aria-current={isActive ? 'true' : undefined}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+                    'flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
                     isActive && 'bg-secondary',
                   )}
                 >
