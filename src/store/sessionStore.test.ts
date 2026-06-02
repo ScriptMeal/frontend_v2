@@ -7,6 +7,7 @@ beforeEach(() => {
     currentSessionId: 'init',
     history: [],
     sessions: [],
+    favoriteSessionIds: [],
     pendingMessage: null,
   })
 })
@@ -49,7 +50,7 @@ describe('sessionStore — localStorage 영속화 (persist)', () => {
     ])
   })
 
-  it('sessions 만 persist 하고 history·currentSessionId 는 저장하지 않는다 (partialize, edge)', () => {
+  it('sessions·favoriteSessionIds 만 persist 하고 history·currentSessionId 는 저장하지 않는다 (partialize, edge)', () => {
     useSessionStore.setState({
       currentSessionId: 'live-xyz',
       history: [{ role: 'user', content: 'hi' }],
@@ -59,7 +60,7 @@ describe('sessionStore — localStorage 영속화 (persist)', () => {
       .addSession({ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p' })
 
     const parsed = JSON.parse(localStorage.getItem('scriptmeal-sessions')!)
-    expect(Object.keys(parsed.state)).toEqual(['sessions'])
+    expect(Object.keys(parsed.state).sort()).toEqual(['favoriteSessionIds', 'sessions'])
   })
 
   it('localStorage 에 저장된 세션을 rehydrate 후 복원한다 (새로고침 시나리오, happy)', async () => {
@@ -78,6 +79,33 @@ describe('sessionStore — localStorage 영속화 (persist)', () => {
     expect(useSessionStore.getState().sessions).toEqual([
       { id: 'restored', createdAt: '2026-06-02T00:00:00Z', preview: '복원됨' },
     ])
+  })
+})
+
+describe('sessionStore — 즐겨찾기 보유 세션 인덱스 (favoriteSessionIds)', () => {
+  it('markSessionFavorited 는 세션 id 를 추가하고 중복을 막는다 (happy/edge)', () => {
+    useSessionStore.getState().markSessionFavorited('s1')
+    useSessionStore.getState().markSessionFavorited('s1')
+    useSessionStore.getState().markSessionFavorited('s2')
+
+    expect(useSessionStore.getState().favoriteSessionIds).toEqual(['s1', 's2'])
+  })
+
+  it('unmarkSessionFavorited 는 해당 id 를 제거한다 (happy)', () => {
+    useSessionStore.setState({ favoriteSessionIds: ['s1', 's2'] })
+
+    useSessionStore.getState().unmarkSessionFavorited('s1')
+
+    expect(useSessionStore.getState().favoriteSessionIds).toEqual(['s2'])
+  })
+
+  it('favoriteSessionIds 도 localStorage 에 persist 된다 (edge)', () => {
+    useSessionStore.getState().markSessionFavorited('s1')
+
+    const parsed = JSON.parse(localStorage.getItem('scriptmeal-sessions')!)
+    expect(parsed.state.favoriteSessionIds).toEqual(['s1'])
+    // 라이브 상태는 여전히 저장되지 않는다
+    expect(Object.keys(parsed.state).sort()).toEqual(['favoriteSessionIds', 'sessions'])
   })
 })
 

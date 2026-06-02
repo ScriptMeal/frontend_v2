@@ -2,8 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import FavoriteCard from '@/components/favorites/FavoriteCard'
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
-import { useFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
-import { useSessionStore } from '@/store/sessionStore'
+import { useAllFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
 
 // DESIGN.md §8 — 카드 stagger 등장(0.06s) + 삭제 시 fade-out
 const listMotion = {
@@ -15,9 +14,9 @@ const itemMotion = {
 }
 
 export default function FavoritesPage() {
-  const sessionId = useSessionStore((s) => s.currentSessionId)
-  const { data: favorites, isLoading, isError } = useFavorites(sessionId)
-  const deleteFavorite = useDeleteFavorite(sessionId)
+  // 보유 세션 인덱스 기반 집계 — 전체 세션의 즐겨찾기를 합산해 보여준다.
+  const { data: favorites, isLoading, isError } = useAllFavorites()
+  const deleteFavorite = useDeleteFavorite()
 
   const isEmpty = !isLoading && !isError && favorites?.length === 0
 
@@ -58,7 +57,9 @@ export default function FavoritesPage() {
                 >
                   <FavoriteCard
                     favorite={favorite}
-                    onDelete={(id) => deleteFavorite.mutate(id)}
+                    onDelete={(id) =>
+                      deleteFavorite.mutate({ id, session_id: favorite.session_id })
+                    }
                   />
                 </motion.div>
               ))}
