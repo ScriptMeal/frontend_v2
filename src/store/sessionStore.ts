@@ -7,12 +7,19 @@ interface SessionState {
   currentSessionId: string
   history: Message[]
   sessions: Session[]
+  /**
+   * 즐겨찾기를 1건 이상 보유한 세션 id 집합. 즐겨찾기 페이지가 이 세션들에만
+   * `GET /api/favorites` 를 fan-out 한다(세션 총수와 무관하게 부하 최소화).
+   */
+  favoriteSessionIds: string[]
   /** 홈→채팅 핸드오프: 채팅 진입 시 자동 전송할 첫 메시지 */
   pendingMessage: string | null
   startNewSession: () => void
   addMessage: (message: Message) => void
   setHistory: (history: Message[]) => void
   addSession: (session: Session) => void
+  markSessionFavorited: (sessionId: string) => void
+  unmarkSessionFavorited: (sessionId: string) => void
   setPendingMessage: (message: string) => void
   /**
    * 대기 메시지를 원자적으로 읽고 즉시 비운다(없으면 null).
@@ -33,6 +40,7 @@ export const useSessionStore = create<SessionState>()(
       currentSessionId: generateUUID(),
       history: [],
       sessions: [],
+      favoriteSessionIds: [],
       pendingMessage: null,
 
       startNewSession: () =>
@@ -51,6 +59,18 @@ export const useSessionStore = create<SessionState>()(
           sessions: [session, ...state.sessions.filter((s) => s.id !== session.id)],
         })),
 
+      markSessionFavorited: (sessionId) =>
+        set((state) =>
+          state.favoriteSessionIds.includes(sessionId)
+            ? state
+            : { favoriteSessionIds: [...state.favoriteSessionIds, sessionId] },
+        ),
+
+      unmarkSessionFavorited: (sessionId) =>
+        set((state) => ({
+          favoriteSessionIds: state.favoriteSessionIds.filter((id) => id !== sessionId),
+        })),
+
       setPendingMessage: (message) => set({ pendingMessage: message }),
 
       consumePendingMessage: () => {
@@ -62,8 +82,11 @@ export const useSessionStore = create<SessionState>()(
     {
       name: 'scriptmeal-sessions',
       storage: createJSONStorage(() => localStorage),
-      // 사이드바 목록만 보존 — 라이브 세션 상태는 휘발이 의도.
-      partialize: (state) => ({ sessions: state.sessions }),
+      // 사이드바 목록 + 즐겨찾기 보유 세션 인덱스만 보존 — 라이브 세션 상태는 휘발이 의도.
+      partialize: (state) => ({
+        sessions: state.sessions,
+        favoriteSessionIds: state.favoriteSessionIds,
+      }),
     },
   ),
 )
