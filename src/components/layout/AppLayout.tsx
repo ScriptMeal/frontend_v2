@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
+import { useClearSessionsShortcut } from '@/hooks/useClearSessionsShortcut'
 import { cn } from '@/lib/utils'
 import Sidebar from './Sidebar'
 
@@ -13,6 +14,9 @@ export default function AppLayout({ children }: Props) {
   const isSidebarOpen = useUIStore((s) => s.isSidebarOpen)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
+
+  // Ctrl+Alt+R — 세션 데이터 빠른 초기화(시연용)
+  useClearSessionsShortcut()
 
   // 모바일 오버레이 사이드바: ESC 로 닫기 (키보드 접근성)
   useEffect(() => {

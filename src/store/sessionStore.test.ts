@@ -109,6 +109,40 @@ describe('sessionStore — 즐겨찾기 보유 세션 인덱스 (favoriteSession
   })
 })
 
+describe('sessionStore — clearSessions (단축키 초기화)', () => {
+  it('sessions·favoriteSessionIds·history 를 비우고 새 세션을 연다 (happy)', () => {
+    useSessionStore.setState({
+      sessions: [{ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p' }],
+      favoriteSessionIds: ['s1'],
+      history: [{ role: 'user', content: 'hi' }],
+      pendingMessage: 'x',
+    })
+    const prevId = useSessionStore.getState().currentSessionId
+
+    useSessionStore.getState().clearSessions()
+
+    const s = useSessionStore.getState()
+    expect(s.sessions).toEqual([])
+    expect(s.favoriteSessionIds).toEqual([])
+    expect(s.history).toEqual([])
+    expect(s.pendingMessage).toBeNull()
+    expect(s.currentSessionId).not.toBe(prevId)
+  })
+
+  it('비운 결과가 localStorage 에 반영된다 (edge)', () => {
+    useSessionStore.setState({
+      sessions: [{ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p' }],
+      favoriteSessionIds: ['s1'],
+    })
+
+    useSessionStore.getState().clearSessions()
+
+    const parsed = JSON.parse(localStorage.getItem('scriptmeal-sessions')!)
+    expect(parsed.state.sessions).toEqual([])
+    expect(parsed.state.favoriteSessionIds).toEqual([])
+  })
+})
+
 describe('sessionStore — consumePendingMessage (핸드오프 1회 전송 보장)', () => {
   it('대기 메시지를 반환하면서 즉시 비운다 (happy)', () => {
     useSessionStore.setState({ pendingMessage: '떡볶이 먹고 싶어' })
