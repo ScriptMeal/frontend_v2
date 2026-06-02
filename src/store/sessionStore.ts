@@ -15,6 +15,8 @@ interface SessionState {
   /** 홈→채팅 핸드오프: 채팅 진입 시 자동 전송할 첫 메시지 */
   pendingMessage: string | null
   startNewSession: () => void
+  /** 영속된 세션 목록·즐겨찾기 인덱스를 모두 비우고 새 세션을 연다(시연용 빠른 초기화). */
+  clearSessions: () => void
   addMessage: (message: Message) => void
   setHistory: (history: Message[]) => void
   addSession: (session: Session) => void
@@ -47,6 +49,16 @@ export const useSessionStore = create<SessionState>()(
         set({
           currentSessionId: generateUUID(),
           history: [],
+          pendingMessage: null,
+        }),
+
+      // 새 세션 + 영속 데이터(sessions·favoriteSessionIds)까지 비운다. persist 가 localStorage 도 동기화.
+      clearSessions: () =>
+        set({
+          currentSessionId: generateUUID(),
+          history: [],
+          sessions: [],
+          favoriteSessionIds: [],
           pendingMessage: null,
         }),
 
