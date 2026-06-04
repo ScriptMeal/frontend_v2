@@ -4,6 +4,7 @@ import ChatInput from '@/components/chat/ChatInput'
 import ToolIndicator from '@/components/chat/ToolIndicator'
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
+import { isFavoritableIntent } from '@/lib/intent'
 import type { Intent, Message } from '@/types'
 
 /** 즐겨찾기할 대화 턴(질문 + 답변 + 의도) */
@@ -63,8 +64,11 @@ export default function ChatView({
 
           {history.map((message, index) => {
             // assistant 턴의 질문은 직전 user 메시지. 즐겨찾기 payload 구성에 쓴다.
+            // 레시피 추천 응답(SPECIFIC_FOOD·GENERAL_RECIPE)만 즐겨찾기 대상.
             const favoriteHandler =
-              onFavorite && message.role === 'assistant'
+              onFavorite &&
+              message.role === 'assistant' &&
+              isFavoritableIntent(message.intent)
                 ? () =>
                     onFavorite({
                       user_message: history[index - 1]?.content ?? '',
