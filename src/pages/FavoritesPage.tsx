@@ -1,6 +1,6 @@
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
-import FavoritesCloud from '@/components/favorites/FavoritesCloud'
+import FavoritesGrid from '@/components/favorites/FavoritesGrid'
 import { useAllFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
 
 export default function FavoritesPage() {
@@ -19,8 +19,8 @@ export default function FavoritesPage() {
   return (
     <div className="relative isolate h-full overflow-y-auto">
       {isEmpty && <AuraBackground />}
-      <div className="mx-auto w-full max-w-5xl px-2 py-8">
-        <header className="mb-6 px-2">
+      <div className="mx-auto w-full max-w-2xl px-4 py-8">
+        <header className="mb-6">
           <h1 className="text-display-sm text-foreground">즐겨찾기</h1>
           <p className="mt-1 text-sm text-muted-foreground">저장한 레시피를 모아봤어요.</p>
         </header>
@@ -36,7 +36,7 @@ export default function FavoritesPage() {
         )}
 
         {!isLoading && !isError && favorites && favorites.length > 0 && (
-          <FavoritesCloud favorites={favorites} onDelete={handleDelete} />
+          <FavoritesGrid favorites={favorites} onDelete={handleDelete} />
         )}
       </div>
     </div>
