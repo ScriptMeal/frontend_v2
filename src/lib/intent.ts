@@ -9,3 +9,12 @@ export function toolToIntent(tool: string | undefined): Intent {
   if (tool === 'get_weather_recipe') return 'GENERAL_RECIPE'
   return 'OFF_TOPIC'
 }
+
+/**
+ * 즐겨찾기 가능한 응답인지 판별한다.
+ * 레시피 추천 응답(SPECIFIC_FOOD·GENERAL_RECIPE)만 저장 대상이며,
+ * OFF_TOPIC·후속 질문(intent 미상)은 즐겨찾기 버튼을 노출하지 않는다.
+ */
+export function isFavoritableIntent(intent: Intent | undefined): boolean {
+  return intent === 'SPECIFIC_FOOD' || intent === 'GENERAL_RECIPE'
+}

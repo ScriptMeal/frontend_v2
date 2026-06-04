@@ -1,17 +1,7 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import FavoriteCard from '@/components/favorites/FavoriteCard'
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
+import FavoritesCloud from '@/components/favorites/FavoritesCloud'
 import { useAllFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
-
-// DESIGN.md §8 — 카드 stagger 등장(0.06s) + 삭제 시 fade-out
-const listMotion = {
-  show: { transition: { staggerChildren: 0.06 } },
-}
-const itemMotion = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' as const } },
-}
 
 export default function FavoritesPage() {
   // 보유 세션 인덱스 기반 집계 — 전체 세션의 즐겨찾기를 합산해 보여준다.
@@ -20,11 +10,17 @@ export default function FavoritesPage() {
 
   const isEmpty = !isLoading && !isError && favorites?.length === 0
 
+  // 삭제는 모달에서 id 로 들어오므로, 로드된 목록에서 session_id 를 찾아 함께 전달한다.
+  const handleDelete = (id: number) => {
+    const target = favorites?.find((f) => f.id === id)
+    if (target) deleteFavorite.mutate({ id, session_id: target.session_id })
+  }
+
   return (
     <div className="relative isolate h-full overflow-y-auto">
       {isEmpty && <AuraBackground />}
-      <div className="mx-auto w-full max-w-2xl px-4 py-8">
-        <header className="mb-6">
+      <div className="mx-auto w-full max-w-5xl px-2 py-8">
+        <header className="mb-6 px-2">
           <h1 className="text-display-sm text-foreground">즐겨찾기</h1>
           <p className="mt-1 text-sm text-muted-foreground">저장한 레시피를 모아봤어요.</p>
         </header>
@@ -40,31 +36,7 @@ export default function FavoritesPage() {
         )}
 
         {!isLoading && !isError && favorites && favorites.length > 0 && (
-          <motion.div
-            className="flex flex-col gap-4"
-            variants={listMotion}
-            initial="hidden"
-            animate="show"
-          >
-            <AnimatePresence>
-              {favorites.map((favorite) => (
-                <motion.div
-                  key={favorite.id}
-                  variants={itemMotion}
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  layout
-                >
-                  <FavoriteCard
-                    favorite={favorite}
-                    onDelete={(id) =>
-                      deleteFavorite.mutate({ id, session_id: favorite.session_id })
-                    }
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <FavoritesCloud favorites={favorites} onDelete={handleDelete} />
         )}
       </div>
     </div>

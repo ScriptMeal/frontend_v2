@@ -53,12 +53,16 @@ describe('FavoritesPage', () => {
     expect(screen.getByText(/아직 저장한 즐겨찾기가 없습니다/)).toBeInTheDocument()
   })
 
-  it('삭제 클릭 시 id 와 session_id 로 삭제를 호출한다 (happy)', async () => {
+  it('타일 → 상세 모달 → 삭제 시 id 와 session_id 로 삭제를 호출한다 (happy)', async () => {
     const user = userEvent.setup()
     mocks.all.data = [makeFav(1, { session_id: 'sA', user_message: 'A세션 질문' })]
     render(<FavoritesPage />)
 
-    await user.click(screen.getByRole('button', { name: '즐겨찾기 삭제' }))
+    // 타일 클릭 → 상세 모달 오픈
+    await user.click(screen.getByRole('button', { name: 'A세션 질문' }))
+    // 모달 안의 삭제 버튼 클릭
+    await user.click(screen.getByRole('button', { name: '삭제' }))
+
     expect(mocks.del).toHaveBeenCalledWith({ id: 1, session_id: 'sA' })
   })
 })
