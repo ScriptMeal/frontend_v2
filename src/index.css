@@ -31,6 +31,15 @@
   .orb-peach {
     background: radial-gradient(circle at center, #fed7aa, #fca5a5);
   }
+  .orb-lavender {
+    background: radial-gradient(circle at center, #ddd6fe, #c4b5fd);
+  }
+  .orb-sky {
+    background: radial-gradient(circle at center, #bae6fd, #93c5fd);
+  }
+  .orb-rose {
+    background: radial-gradient(circle at center, #fecdd3, #fda4af);
+  }
 
   /* 채팅 로딩 인디케이터 — 점이 하나씩 누적됐다 한 번에 사라지는 루프 (ToolIndicator) */
   .loading-dots {

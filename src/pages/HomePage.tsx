@@ -17,7 +17,7 @@ export default function HomePage() {
       <AuraBackground animated />
       <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center px-4">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-light tracking-tight text-foreground sm:text-3xl">
+          <h1 className="break-keep text-2xl font-light tracking-tight text-foreground sm:text-3xl">
             오늘은 어떤 다이어트 레시피를 원하세요?
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">

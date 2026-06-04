@@ -6,6 +6,7 @@ import HomePage from '@/pages/HomePage'
 import ChatPage from '@/pages/ChatPage'
 import FavoritesPage from '@/pages/FavoritesPage'
 import DevPlaygroundPage from '@/pages/DevPlaygroundPage'
+import DevFavoritesPage from '@/pages/DevFavoritesPage'
 
 const queryClient = new QueryClient()
 
@@ -31,6 +32,8 @@ function AnimatedRoutes() {
           <Route path="/favorites" element={<FavoritesPage />} />
           {/* DEV 전용 — mock 데이터로 채팅 UI 확인 (/dev) */}
           <Route path="/dev" element={<DevPlaygroundPage />} />
+          {/* DEV 전용 — 즐겨찾기 카드 3안 비교 (/dev/favorites) */}
+          <Route path="/dev/favorites" element={<DevFavoritesPage />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
