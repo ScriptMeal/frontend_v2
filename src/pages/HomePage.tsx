@@ -1,11 +1,17 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChatInput from '@/components/chat/ChatInput'
+import SuggestedQuestions from '@/components/home/SuggestedQuestions'
 import AuraBackground from '@/components/common/AuraBackground'
+import { pickSuggestions } from '@/lib/pickSuggestions'
+import { suggestedQuestions } from '@/lib/suggestedQuestions'
 import { useSessionStore } from '@/store/sessionStore'
 
 export default function HomePage() {
   const navigate = useNavigate()
   const setPendingMessage = useSessionStore((s) => s.setPendingMessage)
+  // 마운트당 1회만 추첨해 고정 — 매 렌더 재추첨 방지(결정 20260604-home-suggested-questions)
+  const [suggestions] = useState(() => pickSuggestions(suggestedQuestions, 3))
 
   const handleSubmit = (message: string) => {
     setPendingMessage(message)
@@ -26,6 +32,7 @@ export default function HomePage() {
         </div>
         <div className="w-full">
           <ChatInput onSubmit={handleSubmit} autoFocus />
+          <SuggestedQuestions questions={suggestions} onSelect={handleSubmit} />
         </div>
       </div>
     </div>
