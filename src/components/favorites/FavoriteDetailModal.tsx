@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import RecipeContent from '@/components/chat/RecipeContent'
-import IntentChip from '@/components/favorites/IntentChip'
 import type { FavoriteRecord } from '@/types'
 
 interface Props {
@@ -46,12 +45,9 @@ export default function FavoriteDetailModal({ favorite, onClose, onDelete }: Pro
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-3 border-b border-hairline px-5 py-4">
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className="text-sm font-medium text-body-strong">
-              {favorite.user_message}
-            </p>
-            <IntentChip intent={favorite.intent} />
-          </div>
+          <p className="text-sm font-medium text-body-strong">
+            {favorite.user_message}
+          </p>
           <Button variant="ghost" size="icon-sm" aria-label="닫기" onClick={onClose}>
             <X className="text-muted-foreground" />
           </Button>
