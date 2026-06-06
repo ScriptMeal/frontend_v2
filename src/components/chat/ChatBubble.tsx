@@ -15,17 +15,22 @@ interface Props {
   role: 'user' | 'assistant'
   content: string
   isStreaming?: boolean
-  /** assistant 버블에 한해 하단 즐겨찾기 버튼을 노출하고, 클릭 시 호출 */
-  onFavorite?: () => void
+  /** assistant 버블에 한해 즐겨찾기 버튼을 노출한다. 저장 성공 시 생성된 favorite id 를 반환한다. */
+  onSaveFavorite?: () => Promise<number>
+  /** 저장된 즐겨찾기를 해제(삭제)한다. 저장 시 받은 id 로 호출된다. */
+  onDeleteFavorite?: (id: number) => void | Promise<void>
 }
 
 export default function ChatBubble({
   role,
   content,
   isStreaming = false,
-  onFavorite,
+  onSaveFavorite,
+  onDeleteFavorite,
 }: Props) {
-  const [saved, setSaved] = useState(false)
+  // 저장되면 favorite id 를 보유한다(=별 채움). 해제하면 null 로 되돌린다.
+  const [favoriteId, setFavoriteId] = useState<number | null>(null)
+  const [pending, setPending] = useState(false)
 
   if (role === 'user') {
     return (
@@ -38,9 +43,24 @@ export default function ChatBubble({
     )
   }
 
-  const handleFavorite = () => {
-    onFavorite?.()
-    setSaved(true)
+  const isSaved = favoriteId !== null
+
+  const handleToggle = async () => {
+    if (pending || !onSaveFavorite) return
+    setPending(true)
+    try {
+      if (favoriteId === null) {
+        const id = await onSaveFavorite()
+        setFavoriteId(id)
+      } else {
+        await onDeleteFavorite?.(favoriteId)
+        setFavoriteId(null)
+      }
+    } catch {
+      // 저장/삭제 실패: 상태를 바꾸지 않는다(중복 400 등은 상위에서 토스트로 안내).
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -58,19 +78,20 @@ export default function ChatBubble({
         <RecipeContent content={content} />
       </div>
 
-      {onFavorite && (
+      {onSaveFavorite && (
         <button
           type="button"
-          onClick={handleFavorite}
-          disabled={saved}
-          aria-label={saved ? '즐겨찾기에 저장됨' : '즐겨찾기에 저장'}
+          onClick={handleToggle}
+          disabled={pending}
+          aria-label={isSaved ? '즐겨찾기 해제' : '즐겨찾기에 저장'}
+          aria-pressed={isSaved}
           className={cn(
-            'flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-default',
-            saved ? 'text-accent' : 'text-muted-foreground hover:text-accent',
+            'flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-default disabled:opacity-60',
+            isSaved ? 'text-accent' : 'text-muted-foreground hover:text-accent',
           )}
         >
-          <Star className={cn('size-3.5', saved && 'fill-accent')} />
-          {saved ? '저장됨' : '즐겨찾기'}
+          <Star className={cn('size-3.5', isSaved && 'fill-accent')} />
+          {isSaved ? '저장됨' : '즐겨찾기'}
         </button>
       )}
     </motion.div>

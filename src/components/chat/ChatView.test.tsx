@@ -28,22 +28,22 @@ describe('ChatView — 즐겨찾기 노출 조건 (intent 게이팅)', () => {
   ]
 
   it('intent 가 SPECIFIC_FOOD 면 즐겨찾기 버튼을 노출한다 (happy)', () => {
-    render(<ChatView history={turn('SPECIFIC_FOOD')} onSend={() => {}} onFavorite={() => {}} />)
+    render(<ChatView history={turn('SPECIFIC_FOOD')} onSend={() => {}} onSaveFavorite={async () => 1} />)
     expect(screen.getByRole('button', { name: /즐겨찾기/ })).toBeInTheDocument()
   })
 
   it('intent 가 GENERAL_RECIPE 면 즐겨찾기 버튼을 노출한다 (happy)', () => {
-    render(<ChatView history={turn('GENERAL_RECIPE')} onSend={() => {}} onFavorite={() => {}} />)
+    render(<ChatView history={turn('GENERAL_RECIPE')} onSend={() => {}} onSaveFavorite={async () => 1} />)
     expect(screen.getByRole('button', { name: /즐겨찾기/ })).toBeInTheDocument()
   })
 
   it('intent 가 OFF_TOPIC 면 즐겨찾기 버튼을 노출하지 않는다 (edge)', () => {
-    render(<ChatView history={turn('OFF_TOPIC')} onSend={() => {}} onFavorite={() => {}} />)
+    render(<ChatView history={turn('OFF_TOPIC')} onSend={() => {}} onSaveFavorite={async () => 1} />)
     expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
   })
 
   it('intent 가 없으면 즐겨찾기 버튼을 노출하지 않는다 (edge)', () => {
-    render(<ChatView history={turn(undefined)} onSend={() => {}} onFavorite={() => {}} />)
+    render(<ChatView history={turn(undefined)} onSend={() => {}} onSaveFavorite={async () => 1} />)
     expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
   })
 })

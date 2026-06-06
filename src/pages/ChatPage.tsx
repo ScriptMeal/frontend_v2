@@ -4,14 +4,25 @@ import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
 import StateMessage from '@/components/common/StateMessage'
 import { useStream } from '@/hooks/useStream'
 import { useHistory } from '@/hooks/useHistory'
-import { useSaveFavorite } from '@/hooks/useFavorites'
+import { useSaveFavorite, useDeleteFavorite } from '@/hooks/useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
 import { recordToMessages } from '@/lib/recordToMessages'
 
-/** 즐겨찾기 저장 핸들러 — 현재 세션 id 로 턴을 저장한다 */
-function useFavoriteHandler(sessionId: string) {
+/**
+ * 즐겨찾기 토글 핸들러 — 현재 세션 id 기준.
+ * 저장은 생성된 favorite id 를 반환해 버블이 토글(삭제)에 쓰게 하고, 삭제는 그 id 로 호출한다.
+ */
+function useFavoriteHandlers(sessionId: string) {
   const saveFavorite = useSaveFavorite()
-  return (turn: FavoriteTurn) => saveFavorite.mutate({ session_id: sessionId, ...turn })
+  const deleteFavorite = useDeleteFavorite()
+
+  const onSaveFavorite = async (turn: FavoriteTurn) => {
+    const record = await saveFavorite.mutateAsync({ session_id: sessionId, ...turn })
+    return record.id
+  }
+  const onDeleteFavorite = (id: number) => deleteFavorite.mutate({ id, session_id: sessionId })
+
+  return { onSaveFavorite, onDeleteFavorite }
 }
 
 export default function ChatPage() {
@@ -29,7 +40,7 @@ function LiveChat() {
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const consumePendingMessage = useSessionStore((s) => s.consumePendingMessage)
   const { isStreaming, streamingText, activeTool, error, send } = useStream()
-  const onFavorite = useFavoriteHandler(currentSessionId)
+  const { onSaveFavorite, onDeleteFavorite } = useFavoriteHandlers(currentSessionId)
 
   // 홈→채팅 핸드오프: 진입 시 대기 메시지를 원자적으로 읽고 비운 뒤 1회만 전송.
   // StrictMode(개발) 가 effect 를 이중 호출해도 두 번째엔 스토어가 비어 null 을 받아 재전송하지 않는다.
@@ -46,7 +57,8 @@ function LiveChat() {
       activeTool={activeTool}
       error={error}
       onSend={send}
-      onFavorite={onFavorite}
+      onSaveFavorite={onSaveFavorite}
+      onDeleteFavorite={onDeleteFavorite}
     />
   )
 }
@@ -55,7 +67,7 @@ function LiveChat() {
 function ReadOnlyChat({ sessionId }: { sessionId: string }) {
   const { data, isLoading, isError } = useHistory(sessionId)
   const messages = useMemo(() => recordToMessages(data ?? []), [data])
-  const onFavorite = useFavoriteHandler(sessionId)
+  const { onSaveFavorite, onDeleteFavorite } = useFavoriteHandlers(sessionId)
 
   if (isLoading) {
     return (
@@ -73,5 +85,12 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
     )
   }
 
-  return <ChatView history={messages} readOnly onFavorite={onFavorite} />
+  return (
+    <ChatView
+      history={messages}
+      readOnly
+      onSaveFavorite={onSaveFavorite}
+      onDeleteFavorite={onDeleteFavorite}
+    />
+  )
 }

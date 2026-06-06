@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ChatBubble from './ChatBubble'
 
-describe('ChatBubble', () => {
+describe('ChatBubble — 렌더', () => {
   it('user 메시지는 마크다운 파싱 없이 평문으로 렌더한다 (happy)', () => {
     render(<ChatBubble role="user" content="## 그냥 텍스트" />)
     expect(screen.getByText('## 그냥 텍스트')).toBeInTheDocument()
@@ -21,23 +21,74 @@ describe('ChatBubble', () => {
     expect(container.firstChild).not.toBeNull()
   })
 
-  it('assistant 버블에 onFavorite 가 있으면 즐겨찾기 버튼을 노출하고 클릭 시 호출한다 (happy)', async () => {
-    const user = userEvent.setup()
-    const onFavorite = vi.fn()
-    render(<ChatBubble role="assistant" content="## 떡볶이" onFavorite={onFavorite} />)
-
-    const button = screen.getByRole('button', { name: /즐겨찾기/ })
-    await user.click(button)
-    expect(onFavorite).toHaveBeenCalledOnce()
-  })
-
-  it('user 버블은 onFavorite 가 있어도 즐겨찾기 버튼을 노출하지 않는다 (edge)', () => {
-    render(<ChatBubble role="user" content="질문" onFavorite={() => {}} />)
-    expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
-  })
-
-  it('onFavorite 가 없으면 버튼을 노출하지 않는다 (edge)', () => {
+  it('onSaveFavorite 가 없으면 즐겨찾기 버튼을 노출하지 않는다 (edge)', () => {
     render(<ChatBubble role="assistant" content="## 떡볶이" />)
     expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
+  })
+
+  it('user 버블은 onSaveFavorite 가 있어도 즐겨찾기 버튼을 노출하지 않는다 (edge)', () => {
+    render(
+      <ChatBubble role="user" content="질문" onSaveFavorite={async () => 1} onDeleteFavorite={() => {}} />,
+    )
+    expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('ChatBubble — 즐겨찾기 토글', () => {
+  it('클릭하면 저장하고 별이 채워진다(해제 상태로 전환) (happy)', async () => {
+    const user = userEvent.setup()
+    const onSaveFavorite = vi.fn().mockResolvedValue(7)
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        onSaveFavorite={onSaveFavorite}
+        onDeleteFavorite={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기에 저장' }))
+
+    expect(onSaveFavorite).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: '즐겨찾기 해제' })).toBeInTheDocument()
+  })
+
+  it('저장된 별을 다시 클릭하면 받은 id 로 삭제하고 별을 비운다 (happy)', async () => {
+    const user = userEvent.setup()
+    const onSaveFavorite = vi.fn().mockResolvedValue(7)
+    const onDeleteFavorite = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        onSaveFavorite={onSaveFavorite}
+        onDeleteFavorite={onDeleteFavorite}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기에 저장' }))
+    await user.click(screen.getByRole('button', { name: '즐겨찾기 해제' }))
+
+    expect(onDeleteFavorite).toHaveBeenCalledWith(7)
+    expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeInTheDocument()
+  })
+
+  it('저장이 실패하면(예: 400 중복) 별을 채우지 않는다 (error)', async () => {
+    const user = userEvent.setup()
+    const onSaveFavorite = vi.fn().mockRejectedValue(new Error('400'))
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        onSaveFavorite={onSaveFavorite}
+        onDeleteFavorite={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기에 저장' }))
+
+    // 실패했으므로 여전히 저장 가능 상태(해제 버튼 없음)
+    expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '즐겨찾기 해제' })).not.toBeInTheDocument()
   })
 })
