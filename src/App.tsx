@@ -8,6 +8,7 @@ import FavoritesPage from '@/pages/FavoritesPage'
 import DevPlaygroundPage from '@/pages/DevPlaygroundPage'
 import DevFavoritesPage from '@/pages/DevFavoritesPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import Toaster from '@/components/common/Toaster'
 
 const queryClient = new QueryClient()
 
@@ -51,6 +52,7 @@ export default function App() {
           <AppLayout>
             <AnimatedRoutes />
           </AppLayout>
+          <Toaster />
         </BrowserRouter>
       </MotionConfig>
     </QueryClientProvider>
