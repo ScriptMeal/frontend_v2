@@ -138,6 +138,45 @@ describe('useSaveFavorite', () => {
     expect(useSessionStore.getState().favoriteSessionIds).toContain('s9')
   })
 
+  it('mutateAsync 는 생성된 레코드(id 포함)를 반환하고 세션 캐시에 적재한다 (happy)', async () => {
+    mocks.saveFavorite.mockResolvedValue(makeFav(34, { session_id: 's1' }))
+    const { client, wrapper } = makeWrapper()
+    const { result } = renderHook(() => useSaveFavorite(), { wrapper })
+
+    let returned: FavoriteRecord | undefined
+    await act(async () => {
+      returned = await result.current.mutateAsync(savePayload)
+    })
+
+    expect(returned?.id).toBe(34)
+    // 라이브 토글 삭제가 캐시 기반 unmark 를 정확히 판정하도록 저장분을 세션 캐시에 넣는다
+    expect((client.getQueryData(['favorites', 's1']) as FavoriteRecord[]).map((f) => f.id)).toEqual([
+      34,
+    ])
+  })
+
+  it('한 세션에 2개 저장 후 1개만 삭제하면 세션 인덱스는 유지된다 (edge)', async () => {
+    mocks.saveFavorite
+      .mockResolvedValueOnce(makeFav(1, { session_id: 's1' }))
+      .mockResolvedValueOnce(makeFav(2, { session_id: 's1' }))
+    const { client, wrapper } = makeWrapper()
+    const save = renderHook(() => useSaveFavorite(), { wrapper })
+    await act(async () => {
+      await save.result.current.mutateAsync(savePayload)
+      await save.result.current.mutateAsync(savePayload)
+    })
+
+    const del = renderHook(() => useDeleteFavorite(), { wrapper })
+    await act(async () => {
+      await del.result.current.mutateAsync({ id: 1, session_id: 's1' })
+    })
+
+    expect((client.getQueryData(['favorites', 's1']) as FavoriteRecord[]).map((f) => f.id)).toEqual([
+      2,
+    ])
+    expect(useSessionStore.getState().favoriteSessionIds).toContain('s1')
+  })
+
   it('400(중복)이면 안내 토스트를 띄운다 (edge)', async () => {
     mocks.saveFavorite.mockRejectedValue(axiosErrorWithStatus(400))
     const { wrapper } = makeWrapper()
