@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AxiosError, type AxiosResponse } from 'axios'
 import { createElement, type ReactNode } from 'react'
 import type { FavoriteRecord } from '@/types'
+import { useToastStore } from '@/store/toastStore'
 
 const mocks = vi.hoisted(() => ({
   getFavorites: vi.fn(),
@@ -48,7 +50,19 @@ beforeEach(() => {
   mocks.saveFavorite.mockReset().mockResolvedValue(undefined)
   mocks.deleteFavorite.mockReset().mockResolvedValue(undefined)
   useSessionStore.setState({ favoriteSessionIds: [], sessions: [] })
+  useToastStore.setState({ toasts: [] })
 })
+
+function axiosErrorWithStatus(status: number): AxiosError {
+  return new AxiosError('err', 'CODE', undefined, undefined, { status } as AxiosResponse)
+}
+
+const savePayload = {
+  session_id: 's1',
+  user_message: '떡볶이',
+  recipe_reply: '## 떡볶이',
+  intent: 'SPECIFIC_FOOD' as const,
+}
 
 describe('useAllFavorites — 보유 세션 합산', () => {
   it('인덱스의 모든 세션을 조회해 최신순으로 합산한다 (happy)', async () => {
@@ -122,6 +136,40 @@ describe('useSaveFavorite', () => {
     expect(mocks.saveFavorite).toHaveBeenCalledOnce()
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['favorites'] })
     expect(useSessionStore.getState().favoriteSessionIds).toContain('s9')
+  })
+
+  it('400(중복)이면 안내 토스트를 띄운다 (edge)', async () => {
+    mocks.saveFavorite.mockRejectedValue(axiosErrorWithStatus(400))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useSaveFavorite(), { wrapper })
+
+    await act(async () => {
+      try {
+        await result.current.mutateAsync(savePayload)
+      } catch {
+        // 의도된 실패
+      }
+    })
+
+    const { toasts } = useToastStore.getState()
+    expect(toasts).toHaveLength(1)
+    expect(toasts[0].message).toContain('이미')
+  })
+
+  it('400 이 아닌 에러에는 중복 안내 토스트를 띄우지 않는다 (error)', async () => {
+    mocks.saveFavorite.mockRejectedValue(axiosErrorWithStatus(500))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useSaveFavorite(), { wrapper })
+
+    await act(async () => {
+      try {
+        await result.current.mutateAsync(savePayload)
+      } catch {
+        // 의도된 실패
+      }
+    })
+
+    expect(useToastStore.getState().toasts).toHaveLength(0)
   })
 })
 
