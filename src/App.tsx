@@ -7,6 +7,7 @@ import ChatPage from '@/pages/ChatPage'
 import FavoritesPage from '@/pages/FavoritesPage'
 import DevPlaygroundPage from '@/pages/DevPlaygroundPage'
 import DevFavoritesPage from '@/pages/DevFavoritesPage'
+import NotFoundPage from '@/pages/NotFoundPage'
 
 const queryClient = new QueryClient()
 
@@ -34,6 +35,8 @@ function AnimatedRoutes() {
           <Route path="/dev" element={<DevPlaygroundPage />} />
           {/* DEV 전용 — 즐겨찾기 카드 3안 비교 (/dev/favorites) */}
           <Route path="/dev/favorites" element={<DevFavoritesPage />} />
+          {/* catch-all — 매칭되는 라우트가 없으면 404. SPA fallback(vercel.json)이 서버 404 를 막으므로 여기서 처리한다 */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
