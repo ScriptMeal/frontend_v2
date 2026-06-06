@@ -23,8 +23,10 @@ interface Props {
   onSend?: (message: string) => void
   /** 과거 세션 조회 모드 — 입력창 대신 읽기 전용 안내를 보여준다 */
   readOnly?: boolean
-  /** assistant 버블에 즐겨찾기 버튼을 노출하고, 클릭한 턴을 전달 */
-  onFavorite?: (turn: FavoriteTurn) => void
+  /** assistant 버블에 즐겨찾기 버튼을 노출하고, 저장 시 생성된 favorite id 를 반환한다 */
+  onSaveFavorite?: (turn: FavoriteTurn) => Promise<number>
+  /** 저장된 즐겨찾기를 id 로 해제(삭제)한다 */
+  onDeleteFavorite?: (id: number) => void | Promise<void>
 }
 
 /**
@@ -40,7 +42,8 @@ export default function ChatView({
   error = null,
   onSend,
   readOnly = false,
-  onFavorite,
+  onSaveFavorite,
+  onDeleteFavorite,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -65,12 +68,12 @@ export default function ChatView({
           {history.map((message, index) => {
             // assistant 턴의 질문은 직전 user 메시지. 즐겨찾기 payload 구성에 쓴다.
             // 레시피 추천 응답(SPECIFIC_FOOD·GENERAL_RECIPE)만 즐겨찾기 대상.
-            const favoriteHandler =
-              onFavorite &&
+            const saveHandler =
+              onSaveFavorite &&
               message.role === 'assistant' &&
               isFavoritableIntent(message.intent)
                 ? () =>
-                    onFavorite({
+                    onSaveFavorite({
                       user_message: history[index - 1]?.content ?? '',
                       recipe_reply: message.content,
                       intent: message.intent ?? 'OFF_TOPIC',
@@ -82,7 +85,8 @@ export default function ChatView({
                 key={`${message.role}-${index}`}
                 role={message.role}
                 content={message.content}
-                onFavorite={favoriteHandler}
+                onSaveFavorite={saveHandler}
+                onDeleteFavorite={onDeleteFavorite}
               />
             )
           })}

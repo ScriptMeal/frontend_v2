@@ -40,8 +40,16 @@ export function useSaveFavorite() {
 
   return useMutation({
     mutationFn: (payload: SaveRecipePayload) => saveFavorite(payload),
-    onSuccess: (_data, variables) => {
+    onSuccess: (record, variables) => {
       markSessionFavorited(variables.session_id)
+      // 저장분을 해당 세션 캐시에 즉시 반영한다. 라이브 세션엔 캐시가 비어 있어,
+      // 이후 토글 삭제 시 useDeleteFavorite 의 잔여 판정(unmark)이 정확해진다.
+      if (record) {
+        queryClient.setQueryData<FavoriteRecord[]>(['favorites', variables.session_id], (old) => [
+          record,
+          ...(old ?? []),
+        ])
+      }
       queryClient.invalidateQueries({ queryKey: ['favorites'] })
     },
     // 백엔드가 중복 저장을 400 으로 가드한다. 사용자에게 이미 저장됨을 안내한다.

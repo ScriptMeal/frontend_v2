@@ -1,7 +1,7 @@
 import ChatView from '@/components/chat/ChatView'
 import { Button } from '@/components/ui/button'
 import { useStream } from '@/hooks/useStream'
-import { useSaveFavorite } from '@/hooks/useFavorites'
+import { useSaveFavorite, useDeleteFavorite } from '@/hooks/useFavorites'
 import { mockStreamChat, mockSaveHistory, mockScenarios } from '@/api/mock/mockChat'
 import { useSessionStore } from '@/store/sessionStore'
 
@@ -19,6 +19,7 @@ export default function DevPlaygroundPage() {
     saveHistory: mockSaveHistory,
   })
   const saveFavorite = useSaveFavorite()
+  const deleteFavorite = useDeleteFavorite()
 
   return (
     <div className="flex h-full flex-col">
@@ -66,8 +67,12 @@ export default function DevPlaygroundPage() {
           activeTool={activeTool}
           error={error}
           onSend={send}
-          onFavorite={(turn) =>
-            saveFavorite.mutate({ session_id: currentSessionId, ...turn })
+          onSaveFavorite={async (turn) => {
+            const record = await saveFavorite.mutateAsync({ session_id: currentSessionId, ...turn })
+            return record.id
+          }}
+          onDeleteFavorite={(id) =>
+            deleteFavorite.mutate({ id, session_id: currentSessionId })
           }
         />
       </div>
