@@ -58,9 +58,10 @@ describe('FavoritesPage', () => {
     mocks.all.data = [makeFav(1, { session_id: 'sA', user_message: 'A세션 질문' })]
     render(<FavoritesPage />)
 
-    // 타일 클릭 → 상세 모달 오픈
-    await user.click(screen.getByRole('button', { name: 'A세션 질문' }))
-    // 모달 안의 삭제 버튼 클릭
+    // 타일(카드) 클릭 → 상세 모달 오픈. 카드는 <article>(role=article)이고 제목은 파싱된 요리명이라,
+    // 클릭 진입점은 role=article 로 잡는다(질문 텍스트는 부제목·모달 헤더에 중복 등장).
+    await user.click(screen.getByRole('article'))
+    // 모달 푸터의 삭제 버튼(접근명 '삭제') — 카드의 '즐겨찾기 삭제' 와 구분된다
     await user.click(screen.getByRole('button', { name: '삭제' }))
 
     expect(mocks.del).toHaveBeenCalledWith({ id: 1, session_id: 'sA' })

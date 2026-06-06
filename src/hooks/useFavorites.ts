@@ -1,6 +1,8 @@
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+import axios from 'axios'
 import { getFavorites, saveFavorite, deleteFavorite } from '@/api/user'
 import { useSessionStore } from '@/store/sessionStore'
+import { useToastStore } from '@/store/toastStore'
 import type { FavoriteRecord, SaveRecipePayload } from '@/types'
 
 /**
@@ -34,12 +36,20 @@ export function useAllFavorites() {
 export function useSaveFavorite() {
   const queryClient = useQueryClient()
   const markSessionFavorited = useSessionStore((s) => s.markSessionFavorited)
+  const addToast = useToastStore((s) => s.addToast)
 
   return useMutation({
     mutationFn: (payload: SaveRecipePayload) => saveFavorite(payload),
     onSuccess: (_data, variables) => {
       markSessionFavorited(variables.session_id)
       queryClient.invalidateQueries({ queryKey: ['favorites'] })
+    },
+    // 백엔드가 중복 저장을 400 으로 가드한다. 사용자에게 이미 저장됨을 안내한다.
+    // (5xx 는 axios 인터셉터가 전역 토스트로 처리하므로 여기선 400 만 다룬다.)
+    onError: (error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        addToast({ variant: 'info', message: '이미 즐겨찾기에 저장된 레시피예요.' })
+      }
     },
   })
 }
