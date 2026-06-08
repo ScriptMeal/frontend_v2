@@ -66,7 +66,13 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
           } else if (event.type === 'done') {
             // 구매 정보(done.value)를 본문 말미에 인라인으로 합침
             const finalReply = accumulated + (event.value ?? '')
+            // history 에 확정 버블을 추가하는 즉시, 임시 스트리밍 버블을 끈다.
+            // 이 정리를 await saveHistory 뒤(finally)로 미루면, 네트워크 대기 동안
+            // 확정 버블 + 임시 버블이 동시에 렌더돼 말풍선이 잠깐 2개로 보인다.
+            // (.claude/debugging/20260608-chat-double-bubble.md 참고)
             addMessage({ role: 'assistant', content: finalReply, intent })
+            setIsStreaming(false)
+            setStreamingText('')
             await saveHistory({
               session_id: currentSessionId,
               user_message: userMessage,
@@ -85,6 +91,7 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
       } catch (err) {
         setError(err instanceof Error ? err.message : '스트리밍 중 오류가 발생했습니다.')
       } finally {
+        // done 경로에선 이미 위에서 정리됨. 에러 경로(스트림 실패)를 위한 안전망.
         setIsStreaming(false)
         setActiveTool(null)
       }
