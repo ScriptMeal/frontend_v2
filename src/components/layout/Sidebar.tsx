@@ -14,7 +14,7 @@ export default function Sidebar() {
 
   const handleNewChat = () => {
     startNewSession()
-    navigate('/')
+    navigate('/home')
   }
 
   // 읽기 전용 세션 진입은 라우팅으로만 처리한다(라이브 store 는 건드리지 않음).
@@ -27,7 +27,7 @@ export default function Sidebar() {
       {/* 브랜드 + 접기 */}
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
         <span className="text-base font-semibold tracking-tight text-foreground">
-          ScriptMeal
+          LARA
         </span>
         <Button
           variant="ghost"

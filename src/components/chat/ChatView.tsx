@@ -95,7 +95,7 @@ export default function ChatView({
 
   return (
     <div className="relative isolate flex h-full flex-col">
-      {isEmptyChat && <AuraBackground />}
+      {isEmptyChat && <AuraBackground animated />}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
           {isEmptyChat && (
