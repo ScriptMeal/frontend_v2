@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement, type ReactNode } from 'react'
 import type { HistoryRecord } from '@/types'
 
-const mocks = vi.hoisted(() => ({ getHistory: vi.fn() }))
-vi.mock('@/api/user', () => ({ getHistory: mocks.getHistory }))
+const mocks = vi.hoisted(() => ({ getHistory: vi.fn(), deleteHistory: vi.fn() }))
+vi.mock('@/api/user', () => ({ getHistory: mocks.getHistory, deleteHistory: mocks.deleteHistory }))
 
-import { useHistory } from './useHistory'
+import { useHistory, useDeleteHistory } from './useHistory'
 
 function wrapper() {
   const client = new QueryClient({
@@ -28,6 +28,7 @@ const record: HistoryRecord = {
 
 beforeEach(() => {
   mocks.getHistory.mockReset()
+  mocks.deleteHistory.mockReset()
 })
 
 describe('useHistory', () => {
@@ -50,5 +51,33 @@ describe('useHistory', () => {
     const { result } = renderHook(() => useHistory('s1'), { wrapper: wrapper() })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
+  })
+})
+
+describe('useDeleteHistory', () => {
+  it('id 로 히스토리를 삭제한다 (happy)', async () => {
+    mocks.deleteHistory.mockResolvedValue(undefined)
+    const { result } = renderHook(() => useDeleteHistory(), { wrapper: wrapper() })
+
+    await act(() => result.current.mutateAsync(1))
+
+    expect(mocks.deleteHistory).toHaveBeenCalledWith(1)
+  })
+
+  it('서버 오류 시 뮤테이션이 실패한다 (error)', async () => {
+    mocks.deleteHistory.mockRejectedValue(new Error('404'))
+    const { result } = renderHook(() => useDeleteHistory(), { wrapper: wrapper() })
+
+    await expect(act(() => result.current.mutateAsync(1))).rejects.toThrow()
+  })
+
+  it('삭제 직후 isSuccess 가 된다 (edge)', async () => {
+    mocks.deleteHistory.mockResolvedValue(undefined)
+    const { result } = renderHook(() => useDeleteHistory(), { wrapper: wrapper() })
+
+    await act(() => result.current.mutateAsync(99))
+
+    // mutateAsync resolve 와 isSuccess 상태 반영 리렌더는 별도 — waitFor 로 확정될 때까지 기다린다.
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 })

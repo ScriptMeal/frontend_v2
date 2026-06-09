@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
 import StateMessage from '@/components/common/StateMessage'
 import { useStream } from '@/hooks/useStream'
-import { useHistory } from '@/hooks/useHistory'
+import { useHistory, useDeleteHistory } from '@/hooks/useHistory'
 import { useSaveFavorite, useDeleteFavorite, useFavoritesForSession } from '@/hooks/useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
 import { recordToMessages, recordToHistoryIds } from '@/lib/recordToMessages'
@@ -40,8 +41,10 @@ function LiveChat() {
   const historyIds = useSessionStore((s) => s.historyIds)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const consumePendingMessage = useSessionStore((s) => s.consumePendingMessage)
+  const removeHistoryPair = useSessionStore((s) => s.removeHistoryPair)
   const { isStreaming, streamingText, activeTool, error, send } = useStream()
   const { onSaveFavorite, onDeleteFavorite } = useFavoriteHandlers(currentSessionId)
+  const deleteHistory = useDeleteHistory()
 
   // 홈→채팅 핸드오프: 진입 시 대기 메시지를 원자적으로 읽고 비운 뒤 1회만 전송.
   // StrictMode(개발) 가 effect 를 이중 호출해도 두 번째엔 스토어가 비어 null 을 받아 재전송하지 않는다.
@@ -49,6 +52,11 @@ function LiveChat() {
     const captured = consumePendingMessage()
     if (captured) void send(captured)
   }, [consumePendingMessage, send])
+
+  const onDeleteHistory = async (historyId: number) => {
+    await deleteHistory.mutateAsync(historyId)
+    removeHistoryPair(historyId)
+  }
 
   return (
     <ChatView
@@ -61,6 +69,7 @@ function LiveChat() {
       historyIds={historyIds}
       onSaveFavorite={onSaveFavorite}
       onDeleteFavorite={onDeleteFavorite}
+      onDeleteHistory={onDeleteHistory}
     />
   )
 }
@@ -84,6 +93,15 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
     [favorites.data],
   )
   const { onSaveFavorite, onDeleteFavorite } = useFavoriteHandlers(sessionId)
+  const deleteHistory = useDeleteHistory()
+  const queryClient = useQueryClient()
+
+  const onDeleteHistory = async (historyId: number) => {
+    await deleteHistory.mutateAsync(historyId)
+    queryClient.invalidateQueries({ queryKey: ['history', sessionId] })
+    // 삭제한 대화가 즐겨찾기돼 있었을 수 있으므로 즐겨찾기 캐시도 무효화해 정합을 맞춘다.
+    queryClient.invalidateQueries({ queryKey: ['favorites', sessionId] })
+  }
 
   // history·favorites 둘 다 로드된 뒤 렌더 — initialFavoriteId 가 첫 mount 에 확정돼야 한다.
   // (즐겨찾기 조회 실패는 치명적이지 않다 — 빈 맵으로 진행해 본문은 정상 노출)
@@ -111,6 +129,7 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
       favoritedMap={favoritedMap}
       onSaveFavorite={onSaveFavorite}
       onDeleteFavorite={onDeleteFavorite}
+      onDeleteHistory={onDeleteHistory}
     />
   )
 }

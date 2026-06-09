@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import ChatBubble from '@/components/chat/ChatBubble'
 import ChatInput from '@/components/chat/ChatInput'
+import ChatPairGroup from '@/components/chat/ChatPairGroup'
+import DeleteHistoryControl from '@/components/chat/DeleteHistoryControl'
 import ToolIndicator from '@/components/chat/ToolIndicator'
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
@@ -39,12 +41,17 @@ interface Props {
   onSaveFavorite?: (turn: FavoriteTurn) => Promise<number>
   /** 저장된 즐겨찾기를 id 로 해제(삭제)한다 */
   onDeleteFavorite?: (id: number) => void | Promise<void>
+  /** 대화 쌍(user+assistant)을 history_id 로 삭제한다 */
+  onDeleteHistory?: (historyId: number) => void | Promise<void>
 }
 
 /**
  * 채팅 화면의 프레젠테이셔널 컴포넌트.
  * 상태/스트림 소유는 상위(ChatPage·DevPlaygroundPage)가 담당하고,
  * 이 컴포넌트는 전달받은 값으로 렌더 + 자동 스크롤만 책임진다.
+ *
+ * 메시지는 user+assistant 쌍 단위로 ChatPairGroup 으로 묶어 렌더한다.
+ * hover 시 그룹 전체 삭제 버튼이 노출되어 "쌍 삭제" 의도를 명확히 한다.
  */
 export default function ChatView({
   history,
@@ -58,6 +65,7 @@ export default function ChatView({
   favoritedMap,
   onSaveFavorite,
   onDeleteFavorite,
+  onDeleteHistory,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -65,6 +73,25 @@ export default function ChatView({
   }, [history.length, streamingText, activeTool])
 
   const isEmptyChat = history.length === 0 && !isStreaming && !error
+
+  // history 를 실제 role 기준으로 묶는다. user→assistant 가 이어질 때만 한 쌍으로 묶고,
+  // 그 외(스트림 에러 후 남은 orphan user, 연속 user, 단독 assistant 등)는 단독 메시지로
+  // 폴백해 각 메시지를 제 role 로 렌더한다. 위치(index 짝/홀)로 묶으면 정합이 깨졌을 때
+  // user 가 assistant 버블로 둔갑하므로 role 을 기준으로 삼는다.
+  type RenderGroup =
+    | { kind: 'pair'; userIdx: number; assistantIdx: number }
+    | { kind: 'single'; idx: number }
+
+  const groups: RenderGroup[] = []
+  for (let i = 0; i < history.length; ) {
+    if (history[i].role === 'user' && history[i + 1]?.role === 'assistant') {
+      groups.push({ kind: 'pair', userIdx: i, assistantIdx: i + 1 })
+      i += 2
+    } else {
+      groups.push({ kind: 'single', idx: i })
+      i += 1
+    }
+  }
 
   return (
     <div className="relative isolate flex h-full flex-col">
@@ -79,37 +106,62 @@ export default function ChatView({
             </StateMessage>
           )}
 
-          {history.map((message, index) => {
-            // assistant 턴의 질문은 직전 user 메시지. 즐겨찾기 payload 구성에 쓴다.
-            // 레시피 추천 응답(SPECIFIC_FOOD·GENERAL_RECIPE)만 즐겨찾기 대상.
-            // history_id 가 확정된 버블만 저장 가능 — 미확정 시 별을 숨겨 POST 누락을 차단한다.
-            const historyId = historyIds?.[index]
+          {groups.map((group) => {
+            // 단독 메시지(orphan): 짝이 없어 즐겨찾기·삭제 대상이 아니다 — 제 role 로만 렌더.
+            if (group.kind === 'single') {
+              const msg = history[group.idx]
+              return (
+                <ChatBubble
+                  key={`single-${group.idx}-${msg.role}`}
+                  role={msg.role}
+                  content={msg.content}
+                />
+              )
+            }
+
+            const userMsg = history[group.userIdx]
+            const assistantMsg = history[group.assistantIdx]
+
+            // 쌍 삭제: historyIds 에서 assistant 인덱스의 history_id 를 찾아 바인딩.
+            // 삭제 컨트롤은 assistant 푸터에서 즐겨찾기 버튼과 나란히 노출한다.
+            const historyId = historyIds?.[group.assistantIdx]
+            const deleteControl =
+              historyId != null && onDeleteHistory ? (
+                <DeleteHistoryControl onDeleteHistory={() => onDeleteHistory(historyId)} />
+              ) : undefined
+
+            // 즐겨찾기 저장/해제: 레시피 응답(favoritable intent) + history_id 확정 시에만.
             const saveHandler =
-              onSaveFavorite &&
-              message.role === 'assistant' &&
-              isFavoritableIntent(message.intent) &&
-              historyId != null
+              onSaveFavorite && isFavoritableIntent(assistantMsg.intent) && historyId != null
                 ? () =>
                     onSaveFavorite({
-                      user_message: history[index - 1]?.content ?? '',
-                      recipe_reply: message.content,
-                      intent: message.intent ?? 'OFF_TOPIC',
+                      user_message: userMsg.content,
+                      recipe_reply: assistantMsg.content,
+                      intent: assistantMsg.intent ?? 'OFF_TOPIC',
                       history_id: historyId,
                     })
                 : undefined
 
-            // 이미 저장된 턴이면 favorite id 로 초기 "저장됨" 상태를 그린다.
             const initialFavoriteId =
               historyId != null ? favoritedMap?.get(historyId)?.favorite_id : undefined
 
+            // 안정적인 React key: history_id 가 있으면 그걸 쓰고, 없으면 userIdx 폴백
+            const pairKey = historyId != null ? `pair-hist-${historyId}` : `pair-idx-${group.userIdx}`
+
             return (
-              <ChatBubble
-                key={`${message.role}-${index}`}
-                role={message.role}
-                content={message.content}
-                initialFavoriteId={initialFavoriteId}
-                onSaveFavorite={saveHandler}
-                onDeleteFavorite={onDeleteFavorite}
+              <ChatPairGroup
+                key={pairKey}
+                userBubble={<ChatBubble role="user" content={userMsg.content} />}
+                assistantBubble={
+                  <ChatBubble
+                    role="assistant"
+                    content={assistantMsg.content}
+                    initialFavoriteId={initialFavoriteId}
+                    onSaveFavorite={saveHandler}
+                    onDeleteFavorite={onDeleteFavorite}
+                    footerAction={deleteControl}
+                  />
+                }
               />
             )
           })}

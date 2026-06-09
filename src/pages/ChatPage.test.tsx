@@ -37,8 +37,11 @@ vi.mock('@/hooks/useStream', () => ({
 }))
 
 // 읽기 전용 모드는 useHistory 로 기록을 로드한다 — 라이브 테스트에선 호출되지 않는다.
-vi.mock('@/hooks/useHistory', () => ({
+// useDeleteHistory 도 함께 모킹해 실제 네트워크 요청을 차단한다.
+vi.mock('@/hooks/useHistory', async (importActual) => ({
+  ...(await importActual<typeof import('@/hooks/useHistory')>()),
   useHistory: () => mocks.history,
+  useDeleteHistory: () => ({ mutateAsync: vi.fn().mockResolvedValue(undefined), isSuccess: false }),
 }))
 
 // useFavoritesForSession 만 모킹(네트워크 차단). 저장/삭제 훅은 실제 구현을 쓴다.

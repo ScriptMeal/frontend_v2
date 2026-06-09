@@ -35,6 +35,11 @@ interface SessionState {
   unmarkSessionFavorited: (sessionId: string) => void
   setPendingMessage: (message: string) => void
   /**
+   * historyId 에 해당하는 user+assistant 쌍을 history 에서 제거하고 historyIds 를 재색인한다.
+   * DELETE /api/history/{id} 성공 직후 라이브 세션에서 호출한다.
+   */
+  removeHistoryPair: (historyId: number) => void
+  /**
    * 대기 메시지를 원자적으로 읽고 즉시 비운다(없으면 null).
    * 핸드오프 effect 가 StrictMode 로 이중 호출돼도 두 번째 호출은 null 을 받아
    * 동일 메시지가 두 번 전송되는 것을 막는다(라이브 스토어 값 기준이라 리렌더 타이밍 무관).
@@ -101,6 +106,31 @@ export const useSessionStore = create<SessionState>()(
         })),
 
       setPendingMessage: (message) => set({ pendingMessage: message }),
+
+      removeHistoryPair: (historyId) =>
+        set((state) => {
+          const entry = Object.entries(state.historyIds).find(([, id]) => id === historyId)
+          if (!entry) return state
+
+          const aIdx = parseInt(entry[0], 10)
+          // 바로 앞이 user 일 때만 쌍으로 묶어 함께 제거한다. 정합이 깨져(앞이 user 가 아님)
+          // 있으면 assistant 단독 제거로 폴백해 무관한 메시지를 지우지 않는다.
+          const uIdx = state.history[aIdx - 1]?.role === 'user' ? aIdx - 1 : -1
+          const removed = new Set([aIdx, uIdx].filter((i) => i >= 0))
+
+          const newHistory = state.history.filter((_, i) => !removed.has(i))
+
+          // 제거된 항목보다 뒤에 있던 인덱스를, 그 앞에서 빠진 개수만큼 당겨 재색인한다.
+          const newHistoryIds: Record<number, number> = {}
+          Object.entries(state.historyIds).forEach(([idxStr, hId]) => {
+            const i = parseInt(idxStr, 10)
+            if (i === aIdx) return
+            const shift = [...removed].filter((r) => r < i).length
+            newHistoryIds[i - shift] = hId
+          })
+
+          return { history: newHistory, historyIds: newHistoryIds }
+        }),
 
       consumePendingMessage: () => {
         const pending = get().pendingMessage

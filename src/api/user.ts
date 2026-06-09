@@ -30,3 +30,7 @@ export async function getFavorites(session_id: string): Promise<FavoriteRecord[]
 export async function deleteFavorite(id: number) {
   await client.delete(`/api/favorites/${id}`)
 }
+
+export async function deleteHistory(id: number) {
+  await client.delete(`/api/history/${id}`)
+}

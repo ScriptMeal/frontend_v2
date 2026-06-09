@@ -203,3 +203,95 @@ describe('sessionStore — consumePendingMessage (핸드오프 1회 전송 보�
     expect(useSessionStore.getState().consumePendingMessage()).toBeNull()
   })
 })
+
+describe('sessionStore — removeHistoryPair (히스토리 쌍 삭제)', () => {
+  it('historyId 에 해당하는 user+assistant 쌍을 history 에서 제거한다 (happy)', () => {
+    useSessionStore.setState({
+      history: [
+        { role: 'user', content: 'q1' },
+        { role: 'assistant', content: 'a1' },
+        { role: 'user', content: 'q2' },
+        { role: 'assistant', content: 'a2' },
+      ],
+      historyIds: { 1: 10, 3: 20 },
+    })
+
+    useSessionStore.getState().removeHistoryPair(10)
+
+    const { history, historyIds } = useSessionStore.getState()
+    expect(history).toEqual([
+      { role: 'user', content: 'q2' },
+      { role: 'assistant', content: 'a2' },
+    ])
+    expect(historyIds).toEqual({ 1: 20 })
+  })
+
+  it('마지막 쌍을 삭제하면 history 가 비워진다 (edge)', () => {
+    useSessionStore.setState({
+      history: [
+        { role: 'user', content: 'q1' },
+        { role: 'assistant', content: 'a1' },
+      ],
+      historyIds: { 1: 10 },
+    })
+
+    useSessionStore.getState().removeHistoryPair(10)
+
+    expect(useSessionStore.getState().history).toEqual([])
+    expect(useSessionStore.getState().historyIds).toEqual({})
+  })
+
+  it('중간 쌍을 삭제하면 뒤 쌍의 historyIds 인덱스를 -2 당겨 재색인한다 (edge)', () => {
+    useSessionStore.setState({
+      history: [
+        { role: 'user', content: 'q1' },
+        { role: 'assistant', content: 'a1' },
+        { role: 'user', content: 'q2' },
+        { role: 'assistant', content: 'a2' },
+        { role: 'user', content: 'q3' },
+        { role: 'assistant', content: 'a3' },
+      ],
+      historyIds: { 1: 10, 3: 20, 5: 30 },
+    })
+
+    useSessionStore.getState().removeHistoryPair(20)
+
+    const { history, historyIds } = useSessionStore.getState()
+    expect(history.map((m) => m.content)).toEqual(['q1', 'a1', 'q3', 'a3'])
+    expect(historyIds).toEqual({ 1: 10, 3: 30 })
+  })
+
+  it('바로 앞이 user 가 아니면(정합 깨짐) assistant 만 제거하고 무관한 메시지를 지키지 않는다 (edge, 방어)', () => {
+    useSessionStore.setState({
+      history: [
+        { role: 'assistant', content: 'orphan-a' },
+        { role: 'user', content: 'q1' },
+        { role: 'assistant', content: 'a1' },
+      ],
+      historyIds: { 0: 10, 2: 20 },
+    })
+
+    useSessionStore.getState().removeHistoryPair(10)
+
+    const { history, historyIds } = useSessionStore.getState()
+    // orphan assistant(index 0)만 제거 — 뒤 쌍(q1+a1)은 보존하고 인덱스를 -1 당긴다.
+    expect(history).toEqual([
+      { role: 'user', content: 'q1' },
+      { role: 'assistant', content: 'a1' },
+    ])
+    expect(historyIds).toEqual({ 1: 20 })
+  })
+
+  it('존재하지 않는 historyId 면 상태가 변하지 않는다 (edge)', () => {
+    const initialHistory = [
+      { role: 'user', content: 'q1' } as const,
+      { role: 'assistant', content: 'a1' } as const,
+    ]
+    useSessionStore.setState({ history: initialHistory, historyIds: { 1: 10 } })
+
+    useSessionStore.getState().removeHistoryPair(999)
+
+    expect(useSessionStore.getState().history).toEqual(initialHistory)
+    expect(useSessionStore.getState().historyIds).toEqual({ 1: 10 })
+  })
+})
