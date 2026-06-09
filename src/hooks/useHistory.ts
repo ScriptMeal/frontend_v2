@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { getHistory } from '@/api/user'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { deleteHistory, getHistory } from '@/api/user'
 
 /**
  * 과거 세션의 대화 기록을 `GET /api/history?session_id=` 로 조회한다.
@@ -17,5 +17,15 @@ export function useHistory(sessionId: string, options: { enabled?: boolean } = {
     staleTime: Infinity,
     // 조회 실패 시 곧바로 에러 상태 노출(읽기 전용 기록은 재시도 이득이 적음)
     retry: false,
+  })
+}
+
+/**
+ * 히스토리 1건을 `DELETE /api/history/{id}` 로 삭제한다.
+ * 성공 후 상태 업데이트(store 갱신 또는 캐시 무효화)는 호출부가 담당한다.
+ */
+export function useDeleteHistory() {
+  return useMutation({
+    mutationFn: (id: number) => deleteHistory(id),
   })
 }

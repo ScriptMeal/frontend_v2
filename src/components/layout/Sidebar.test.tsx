@@ -46,7 +46,7 @@ describe('Sidebar', () => {
     renderSidebar()
     await user.click(screen.getByRole('button', { name: /새 대화/ }))
     expect(useSessionStore.getState().currentSessionId).not.toBe(prevId)
-    expect(mockNavigate).toHaveBeenCalledWith('/')
+    expect(mockNavigate).toHaveBeenCalledWith('/home')
   })
 
   it('즐겨찾기 클릭 시 즐겨찾기 페이지로 이동한다', async () => {

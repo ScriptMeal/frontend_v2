@@ -34,6 +34,34 @@ describe('ChatBubble — 렌더', () => {
   })
 })
 
+describe('ChatBubble — footerAction (즐겨찾기 옆 추가 액션)', () => {
+  it('assistant 버블은 footerAction 을 즐겨찾기 버튼과 함께 노출한다 (happy)', () => {
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        onSaveFavorite={async () => 1}
+        onDeleteFavorite={() => {}}
+        footerAction={<button type="button">삭제</button>}
+      />,
+    )
+    expect(screen.getByRole('button', { name: /즐겨찾기/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '삭제' })).toBeInTheDocument()
+  })
+
+  it('onSaveFavorite 가 없어도 footerAction 만으로 푸터를 노출한다 (edge)', () => {
+    render(
+      <ChatBubble role="assistant" content="## 떡볶이" footerAction={<button type="button">삭제</button>} />,
+    )
+    expect(screen.getByRole('button', { name: '삭제' })).toBeInTheDocument()
+  })
+
+  it('user 버블은 footerAction 을 렌더하지 않는다 (edge)', () => {
+    render(<ChatBubble role="user" content="질문" footerAction={<button type="button">삭제</button>} />)
+    expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
+  })
+})
+
 describe('ChatBubble — 즐겨찾기 토글', () => {
   it('클릭하면 저장하고 별이 채워진다(해제 상태로 전환) (happy)', async () => {
     const user = userEvent.setup()
