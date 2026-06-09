@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import AppLayout from '@/components/layout/AppLayout'
+import LandingPage from '@/pages/LandingPage'
 import HomePage from '@/pages/HomePage'
 import ChatPage from '@/pages/ChatPage'
 import FavoritesPage from '@/pages/FavoritesPage'
@@ -13,7 +14,7 @@ import Toaster from '@/components/common/Toaster'
 const queryClient = new QueryClient()
 
 /** 페이지 전환 — 경로별로 opacity 페이드 (DESIGN.md §8, 0.2s easeOut) */
-function AnimatedRoutes() {
+function AnimatedAppRoutes() {
   const location = useLocation()
   return (
     <AnimatePresence mode="wait">
@@ -27,7 +28,8 @@ function AnimatedRoutes() {
       >
         {/* location 을 고정해 전환 중 exit 페이지가 이전 라우트를 유지하도록 한다 */}
         <Routes location={location}>
-          <Route path="/" element={<HomePage />} />
+          {/* /home = 채팅 입력 화면 (앱 진입점) */}
+          <Route path="/home" element={<HomePage />} />
           {/* /chat = 라이브 세션, /chat/:sessionId = 과거 세션 읽기 전용 열람 */}
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:sessionId" element={<ChatPage />} />
@@ -44,14 +46,26 @@ function AnimatedRoutes() {
   )
 }
 
+/** 앱 셸 — AppLayout + 내부 라우트 묶음 */
+function AppShell() {
+  return (
+    <AppLayout>
+      <AnimatedAppRoutes />
+    </AppLayout>
+  )
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">
         <BrowserRouter>
-          <AppLayout>
-            <AnimatedRoutes />
-          </AppLayout>
+          <Routes>
+            {/* 랜딩 — AppLayout(사이드바) 없이 독립 렌더 */}
+            <Route path="/" element={<LandingPage />} />
+            {/* 앱 내부 라우트 — AppLayout 감싸기 */}
+            <Route path="/*" element={<AppShell />} />
+          </Routes>
           <Toaster />
         </BrowserRouter>
       </MotionConfig>
