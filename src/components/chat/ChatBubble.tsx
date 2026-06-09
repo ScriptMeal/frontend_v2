@@ -24,6 +24,8 @@ interface Props {
   onSaveFavorite?: () => Promise<number>
   /** 저장된 즐겨찾기를 해제(삭제)한다. 저장 시 받은 id 로 호출된다. */
   onDeleteFavorite?: (id: number) => void | Promise<void>
+  /** 즐겨찾기 버튼 옆(푸터)에 나란히 렌더할 추가 액션(예: 대화 삭제). assistant 버블 전용. */
+  footerAction?: React.ReactNode
 }
 
 export default function ChatBubble({
@@ -33,6 +35,7 @@ export default function ChatBubble({
   initialFavoriteId,
   onSaveFavorite,
   onDeleteFavorite,
+  footerAction,
 }: Props) {
   // 저장되면 favorite id 를 보유한다(=별 채움). 해제하면 null 로 되돌린다.
   const [favoriteId, setFavoriteId] = useState<number | null>(initialFavoriteId ?? null)
@@ -42,7 +45,7 @@ export default function ChatBubble({
     return (
       <motion.div
         {...bubbleMotion}
-        className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-lg rounded-br-none bg-primary px-4 py-2.5 text-sm text-primary-foreground"
+        className="ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-lg rounded-br-none bg-primary px-4 py-2.5 text-sm text-primary-foreground"
       >
         {content}
       </motion.div>
@@ -84,21 +87,26 @@ export default function ChatBubble({
         <RecipeContent content={content} />
       </div>
 
-      {onSaveFavorite && (
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={pending}
-          aria-label={isSaved ? '즐겨찾기 해제' : '즐겨찾기에 저장'}
-          aria-pressed={isSaved}
-          className={cn(
-            'flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-default disabled:opacity-60',
-            isSaved ? 'text-accent' : 'text-muted-foreground hover:text-accent',
+      {(onSaveFavorite || footerAction) && (
+        <div className="flex items-center gap-3">
+          {onSaveFavorite && (
+            <button
+              type="button"
+              onClick={handleToggle}
+              disabled={pending}
+              aria-label={isSaved ? '즐겨찾기 해제' : '즐겨찾기에 저장'}
+              aria-pressed={isSaved}
+              className={cn(
+                'flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-default disabled:opacity-60',
+                isSaved ? 'text-accent' : 'text-muted-foreground hover:text-accent',
+              )}
+            >
+              <Star className={cn('size-3.5', isSaved && 'fill-accent')} />
+              {isSaved ? '저장됨' : '즐겨찾기'}
+            </button>
           )}
-        >
-          <Star className={cn('size-3.5', isSaved && 'fill-accent')} />
-          {isSaved ? '저장됨' : '즐겨찾기'}
-        </button>
+          {footerAction}
+        </div>
       )}
     </motion.div>
   )
