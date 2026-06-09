@@ -27,7 +27,7 @@ export default function Sidebar() {
       {/* 브랜드 + 접기 */}
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
         <span className="text-base font-semibold tracking-tight text-foreground">
-          ScriptMeal
+          LARA
         </span>
         <Button
           variant="ghost"

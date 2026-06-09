@@ -82,7 +82,7 @@ export default function ChatMockup() {
     <div className="flex w-[340px] flex-col overflow-hidden rounded-[20px] border border-hairline bg-background shadow-float">
       {/* 헤더 */}
       <div className="flex h-12 shrink-0 items-center px-4 bg-foreground">
-        <span className="text-sm font-semibold tracking-tight text-white">ScriptMeal</span>
+        <span className="text-sm font-semibold tracking-tight text-white">LARA</span>
       </div>
 
       {/* 채팅 영역 */}

@@ -15,7 +15,7 @@ export default function HeroSection() {
         className="max-w-2xl"
       >
         <p className="mb-4 text-sm font-medium tracking-widest text-muted-foreground uppercase">
-          ScriptMeal
+          Lightweight AI Recipe Assistant
         </p>
         <h1 className="break-keep text-5xl font-light leading-tight tracking-tight text-foreground sm:text-6xl">
           좋아하는 음식 그대로, <br />칼로리는 줄여서
