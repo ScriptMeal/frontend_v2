@@ -1,9 +1,9 @@
-import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { getFavorites, saveFavorite, deleteFavorite } from '@/api/user'
 import { useSessionStore } from '@/store/sessionStore'
 import { useToastStore } from '@/store/toastStore'
-import type { FavoriteRecord, SaveRecipePayload } from '@/types'
+import type { FavoriteRecord, SaveFavoritePayload } from '@/types'
 
 /**
  * 즐겨찾기 보유 세션(`favoriteSessionIds`)에만 fan-out 해 전체 즐겨찾기를 합산한다.
@@ -31,6 +31,18 @@ export function useAllFavorites() {
 }
 
 /**
+ * 단일 세션의 즐겨찾기 조회 — 읽기전용 채팅이 저장 여부(history_id 대조)를 그릴 때 쓴다.
+ * `useAllFavorites` 와 동일한 캐시 키(['favorites', id])를 공유해 중복 요청을 피한다.
+ */
+export function useFavoritesForSession(sessionId: string) {
+  return useQuery({
+    queryKey: ['favorites', sessionId],
+    queryFn: () => getFavorites(sessionId),
+    enabled: Boolean(sessionId),
+  })
+}
+
+/**
  * 즐겨찾기 저장 — 성공 시 목록 무효화로 재조회하고, 해당 세션을 보유 인덱스에 등록한다.
  */
 export function useSaveFavorite() {
@@ -39,7 +51,7 @@ export function useSaveFavorite() {
   const addToast = useToastStore((s) => s.addToast)
 
   return useMutation({
-    mutationFn: (payload: SaveRecipePayload) => saveFavorite(payload),
+    mutationFn: (payload: SaveFavoritePayload) => saveFavorite(payload),
     onSuccess: (record, variables) => {
       markSessionFavorited(variables.session_id)
       // 저장분을 해당 세션 캐시에 즉시 반영한다. 라이브 세션엔 캐시가 비어 있어,

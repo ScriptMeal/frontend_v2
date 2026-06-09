@@ -17,7 +17,12 @@ vi.mock('@/api/user', () => ({
   deleteFavorite: mocks.deleteFavorite,
 }))
 
-import { useAllFavorites, useSaveFavorite, useDeleteFavorite } from './useFavorites'
+import {
+  useAllFavorites,
+  useFavoritesForSession,
+  useSaveFavorite,
+  useDeleteFavorite,
+} from './useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
 
 function makeFav(
@@ -26,6 +31,7 @@ function makeFav(
 ): FavoriteRecord {
   return {
     id,
+    history_id: id,
     session_id: 's1',
     user_message: `질문${id}`,
     recipe_reply: `## 답변${id}`,
@@ -62,6 +68,7 @@ const savePayload = {
   user_message: '떡볶이',
   recipe_reply: '## 떡볶이',
   intent: 'SPECIFIC_FOOD' as const,
+  history_id: 11,
 }
 
 describe('useAllFavorites — 보유 세션 합산', () => {
@@ -118,7 +125,42 @@ describe('useAllFavorites — 보유 세션 합산', () => {
   })
 })
 
+describe('useFavoritesForSession — 단일 세션 조회', () => {
+  it('session_id 로 즐겨찾기를 조회해 반환한다 (happy)', async () => {
+    mocks.getFavorites.mockResolvedValue([makeFav(1, { session_id: 's1', history_id: 10 })])
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useFavoritesForSession('s1'), { wrapper })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(mocks.getFavorites).toHaveBeenCalledWith('s1')
+    expect(result.current.data?.map((f) => f.history_id)).toEqual([10])
+  })
+
+  it('useAllFavorites 와 같은 캐시 키를 공유한다 (edge)', async () => {
+    mocks.getFavorites.mockResolvedValue([makeFav(1, { session_id: 's1' })])
+    const { client, wrapper } = makeWrapper()
+    const { result } = renderHook(() => useFavoritesForSession('s1'), { wrapper })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(client.getQueryData(['favorites', 's1'])).toBeTruthy()
+  })
+})
+
 describe('useSaveFavorite', () => {
+  it('payload 의 history_id 를 그대로 saveFavorite 에 전달한다 (happy)', async () => {
+    mocks.saveFavorite.mockResolvedValue(makeFav(50, { session_id: 's1' }))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useSaveFavorite(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync(savePayload)
+    })
+
+    expect(mocks.saveFavorite).toHaveBeenCalledWith(
+      expect.objectContaining({ history_id: 11 }),
+    )
+  })
+
   it('저장 후 favorites 쿼리를 무효화하고 인덱스에 session_id 를 등록한다 (happy)', async () => {
     const { client, wrapper } = makeWrapper()
     const invalidate = vi.spyOn(client, 'invalidateQueries')
@@ -130,6 +172,7 @@ describe('useSaveFavorite', () => {
         user_message: '떡볶이',
         recipe_reply: '## 떡볶이',
         intent: 'SPECIFIC_FOOD',
+        history_id: 9,
       })
     })
 

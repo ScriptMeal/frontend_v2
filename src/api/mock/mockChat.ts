@@ -1,4 +1,4 @@
-import type { ChatRequest, StreamEvent } from '@/types'
+import type { ChatRequest, HistoryRecord, SaveHistoryPayload, StreamEvent } from '@/types'
 
 /**
  * 백엔드(localhost:8000) 없이 채팅 UI 로직을 눈으로 확인하기 위한 mock 스트림.
@@ -128,7 +128,9 @@ export async function* mockStreamChat(
   yield { type: 'done', value: scenario.done }
 }
 
-/** 데모용 no-op 저장기 — 실제 saveHistory 대신 주입 */
-export async function mockSaveHistory(): Promise<void> {
+/** 데모용 저장기 — 실제 saveHistory 대신 주입. 생성 레코드(증가 id)를 반환해 history_id 흐름을 재현한다. */
+let mockHistoryId = 1000
+export async function mockSaveHistory(payload: SaveHistoryPayload): Promise<HistoryRecord> {
   await delay(0)
+  return { ...payload, id: mockHistoryId++, created_at: new Date().toISOString() }
 }

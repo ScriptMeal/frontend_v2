@@ -6,6 +6,15 @@ import { generateUUID } from '@/lib/utils'
 interface SessionState {
   currentSessionId: string
   history: Message[]
+  /**
+   * 라이브 세션의 메시지 index → history_id 매핑.
+   * `saveHistory` 응답의 id 를 보관해, 즐겨찾기 저장 시 history_id 를 함께 보낸다.
+   * Message 객체에 붙이지 않는 이유: assistant 버블을 그린 뒤(await 경계 너머)
+   * 렌더 상태(history 배열)를 다시 mutate 하면 말풍선 이중 렌더가 재발할 수 있다.
+   * (.claude/debugging/20260608-chat-double-bubble.md) → 렌더와 분리된 별도 슬라이스로 보관.
+   * 라이브 전용이라 persist 하지 않는다(새로고침 시 휘발).
+   */
+  historyIds: Record<number, number>
   sessions: Session[]
   /**
    * 즐겨찾기를 1건 이상 보유한 세션 id 집합. 즐겨찾기 페이지가 이 세션들에만
@@ -18,6 +27,8 @@ interface SessionState {
   /** 영속된 세션 목록·즐겨찾기 인덱스를 모두 비우고 새 세션을 연다(시연용 빠른 초기화). */
   clearSessions: () => void
   addMessage: (message: Message) => void
+  /** 라이브 세션에서 메시지 index 의 history_id 를 기록한다(saveHistory 응답 직후). */
+  recordHistoryId: (index: number, historyId: number) => void
   setHistory: (history: Message[]) => void
   addSession: (session: Session) => void
   markSessionFavorited: (sessionId: string) => void
@@ -41,6 +52,7 @@ export const useSessionStore = create<SessionState>()(
     (set, get) => ({
       currentSessionId: generateUUID(),
       history: [],
+      historyIds: {},
       sessions: [],
       favoriteSessionIds: [],
       pendingMessage: null,
@@ -49,6 +61,7 @@ export const useSessionStore = create<SessionState>()(
         set({
           currentSessionId: generateUUID(),
           history: [],
+          historyIds: {},
           pendingMessage: null,
         }),
 
@@ -57,12 +70,16 @@ export const useSessionStore = create<SessionState>()(
         set({
           currentSessionId: generateUUID(),
           history: [],
+          historyIds: {},
           sessions: [],
           favoriteSessionIds: [],
           pendingMessage: null,
         }),
 
       addMessage: (message) => set((state) => ({ history: [...state.history, message] })),
+
+      recordHistoryId: (index, historyId) =>
+        set((state) => ({ historyIds: { ...state.historyIds, [index]: historyId } })),
 
       setHistory: (history) => set({ history }),
 
