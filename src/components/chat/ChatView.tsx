@@ -7,11 +7,13 @@ import AuraBackground from '@/components/common/AuraBackground'
 import { isFavoritableIntent } from '@/lib/intent'
 import type { Intent, Message } from '@/types'
 
-/** 즐겨찾기할 대화 턴(질문 + 답변 + 의도) */
+/** 즐겨찾기할 대화 턴(질문 + 답변 + 의도 + 원본 히스토리 id) */
 export interface FavoriteTurn {
   user_message: string
   recipe_reply: string
   intent: Intent
+  /** 이 턴의 history 레코드 id. 즐겨찾기 저장 시 반드시 함께 전송한다(누락 금지). */
+  history_id: number
 }
 
 interface Props {
@@ -23,6 +25,16 @@ interface Props {
   onSend?: (message: string) => void
   /** 과거 세션 조회 모드 — 입력창 대신 읽기 전용 안내를 보여준다 */
   readOnly?: boolean
+  /**
+   * 메시지 index → history_id 매핑. assistant 버블의 즐겨찾기 저장에 쓴다.
+   * history_id 가 없는 버블은 즐겨찾기 버튼을 노출하지 않는다(POST 누락 차단).
+   */
+  historyIds?: Record<number, number>
+  /**
+   * 이미 즐겨찾기된 턴: history_id → { history_id, favorite_id }.
+   * 읽기전용 진입 시 저장됨 상태를 초기 렌더하는 데 쓴다.
+   */
+  favoritedMap?: Map<number, { history_id: number; favorite_id: number }>
   /** assistant 버블에 즐겨찾기 버튼을 노출하고, 저장 시 생성된 favorite id 를 반환한다 */
   onSaveFavorite?: (turn: FavoriteTurn) => Promise<number>
   /** 저장된 즐겨찾기를 id 로 해제(삭제)한다 */
@@ -42,6 +54,8 @@ export default function ChatView({
   error = null,
   onSend,
   readOnly = false,
+  historyIds,
+  favoritedMap,
   onSaveFavorite,
   onDeleteFavorite,
 }: Props) {
@@ -68,23 +82,32 @@ export default function ChatView({
           {history.map((message, index) => {
             // assistant 턴의 질문은 직전 user 메시지. 즐겨찾기 payload 구성에 쓴다.
             // 레시피 추천 응답(SPECIFIC_FOOD·GENERAL_RECIPE)만 즐겨찾기 대상.
+            // history_id 가 확정된 버블만 저장 가능 — 미확정 시 별을 숨겨 POST 누락을 차단한다.
+            const historyId = historyIds?.[index]
             const saveHandler =
               onSaveFavorite &&
               message.role === 'assistant' &&
-              isFavoritableIntent(message.intent)
+              isFavoritableIntent(message.intent) &&
+              historyId != null
                 ? () =>
                     onSaveFavorite({
                       user_message: history[index - 1]?.content ?? '',
                       recipe_reply: message.content,
                       intent: message.intent ?? 'OFF_TOPIC',
+                      history_id: historyId,
                     })
                 : undefined
+
+            // 이미 저장된 턴이면 favorite id 로 초기 "저장됨" 상태를 그린다.
+            const initialFavoriteId =
+              historyId != null ? favoritedMap?.get(historyId)?.favorite_id : undefined
 
             return (
               <ChatBubble
                 key={`${message.role}-${index}`}
                 role={message.role}
                 content={message.content}
+                initialFavoriteId={initialFavoriteId}
                 onSaveFavorite={saveHandler}
                 onDeleteFavorite={onDeleteFavorite}
               />

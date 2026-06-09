@@ -4,9 +4,9 @@ import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
 import StateMessage from '@/components/common/StateMessage'
 import { useStream } from '@/hooks/useStream'
 import { useHistory } from '@/hooks/useHistory'
-import { useSaveFavorite, useDeleteFavorite } from '@/hooks/useFavorites'
+import { useSaveFavorite, useDeleteFavorite, useFavoritesForSession } from '@/hooks/useFavorites'
 import { useSessionStore } from '@/store/sessionStore'
-import { recordToMessages } from '@/lib/recordToMessages'
+import { recordToMessages, recordToHistoryIds } from '@/lib/recordToMessages'
 
 /**
  * 즐겨찾기 토글 핸들러 — 현재 세션 id 기준.
@@ -37,6 +37,7 @@ export default function ChatPage() {
 /** 라이브 세션 — 메모리 history + 실시간 스트리밍 */
 function LiveChat() {
   const history = useSessionStore((s) => s.history)
+  const historyIds = useSessionStore((s) => s.historyIds)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const consumePendingMessage = useSessionStore((s) => s.consumePendingMessage)
   const { isStreaming, streamingText, activeTool, error, send } = useStream()
@@ -57,6 +58,7 @@ function LiveChat() {
       activeTool={activeTool}
       error={error}
       onSend={send}
+      historyIds={historyIds}
       onSaveFavorite={onSaveFavorite}
       onDeleteFavorite={onDeleteFavorite}
     />
@@ -66,10 +68,26 @@ function LiveChat() {
 /** 과거 세션 — GET /api/history 로드 후 읽기 전용 렌더 */
 function ReadOnlyChat({ sessionId }: { sessionId: string }) {
   const { data, isLoading, isError } = useHistory(sessionId)
+  // 저장 여부(저장됨 배지)를 초기 mount 시점에 정확히 그리려면 즐겨찾기도 함께 로드한다.
+  const favorites = useFavoritesForSession(sessionId)
   const messages = useMemo(() => recordToMessages(data ?? []), [data])
+  const historyIds = useMemo(() => recordToHistoryIds(data ?? []), [data])
+  // history_id → { history_id, favorite_id }. 이미 저장된 턴을 ChatView 가 저장됨으로 렌더한다.
+  const favoritedMap = useMemo(
+    () =>
+      new Map(
+        (favorites.data ?? []).map((f) => [
+          f.history_id,
+          { history_id: f.history_id, favorite_id: f.id },
+        ]),
+      ),
+    [favorites.data],
+  )
   const { onSaveFavorite, onDeleteFavorite } = useFavoriteHandlers(sessionId)
 
-  if (isLoading) {
+  // history·favorites 둘 다 로드된 뒤 렌더 — initialFavoriteId 가 첫 mount 에 확정돼야 한다.
+  // (즐겨찾기 조회 실패는 치명적이지 않다 — 빈 맵으로 진행해 본문은 정상 노출)
+  if (isLoading || favorites.isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <StateMessage variant="loading">대화 기록을 불러오는 중…</StateMessage>
@@ -89,6 +107,8 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
     <ChatView
       history={messages}
       readOnly
+      historyIds={historyIds}
+      favoritedMap={favoritedMap}
       onSaveFavorite={onSaveFavorite}
       onDeleteFavorite={onDeleteFavorite}
     />

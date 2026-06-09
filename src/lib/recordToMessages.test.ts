@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { recordToMessages } from './recordToMessages'
+import { recordToMessages, recordToHistoryIds } from './recordToMessages'
 import type { HistoryRecord } from '@/types'
 
 function makeRecord(over: Partial<HistoryRecord>): HistoryRecord {
@@ -41,5 +41,35 @@ describe('recordToMessages', () => {
 
   it('빈 배열이면 빈 메시지 배열을 반환한다 (edge)', () => {
     expect(recordToMessages([])).toEqual([])
+  })
+})
+
+describe('recordToHistoryIds', () => {
+  it('recordToMessages 와 동일한 순서로 assistant 메시지 index → history_id 를 만든다 (happy)', () => {
+    // recordToMessages 가 reverse+flatten 하므로, 최신순 입력의 assistant index 는 2*r+1
+    const records = [
+      makeRecord({ id: 2, user_message: '둘째' }),
+      makeRecord({ id: 1, user_message: '첫째' }),
+    ]
+    // 뒤집힌 순서: [첫째(id1)=assistant idx1, 둘째(id2)=assistant idx3]
+    expect(recordToHistoryIds(records)).toEqual({ 1: 1, 3: 2 })
+  })
+
+  it('messages 의 assistant 위치와 정확히 정렬된다 (정합성, edge)', () => {
+    const records = [
+      makeRecord({ id: 2, recipe_reply: '둘째답' }),
+      makeRecord({ id: 1, recipe_reply: '첫째답' }),
+    ]
+    const messages = recordToMessages(records)
+    const ids = recordToHistoryIds(records)
+    // 맵의 각 key 위치 메시지는 assistant 여야 하고, 그 외 index 엔 키가 없어야 한다
+    messages.forEach((m, i) => {
+      if (m.role === 'assistant') expect(ids).toHaveProperty(String(i))
+      else expect(ids).not.toHaveProperty(String(i))
+    })
+  })
+
+  it('빈 배열이면 빈 맵을 반환한다 (edge)', () => {
+    expect(recordToHistoryIds([])).toEqual({})
   })
 })

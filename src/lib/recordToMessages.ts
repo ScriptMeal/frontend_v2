@@ -17,3 +17,19 @@ export function recordToMessages(records: RecipeRecord[]): Message[] {
     } satisfies Message,
   ])
 }
+
+/**
+ * `recordToMessages` 와 **동일한 reverse+flatten 순서**로,
+ * 평탄화된 메시지 배열에서 assistant 메시지의 index → 해당 레코드 id(history_id) 맵을 만든다.
+ *
+ * 즐겨찾기는 history_id 로 식별되므로, 읽기전용 채팅이 이 맵으로
+ * (1) 저장 시 보낼 history_id 와 (2) 이미 저장된 버블 판정을 연결한다.
+ * reverse 후 r 번째 레코드는 user=2r, assistant=2r+1 위치를 차지한다(=recordToMessages 와 정합).
+ */
+export function recordToHistoryIds(records: RecipeRecord[]): Record<number, number> {
+  const map: Record<number, number> = {}
+  ;[...records].reverse().forEach((record, r) => {
+    map[2 * r + 1] = record.id
+  })
+  return map
+}

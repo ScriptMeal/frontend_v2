@@ -12,6 +12,7 @@ import { useSessionStore } from '@/store/sessionStore'
  */
 export default function DevPlaygroundPage() {
   const history = useSessionStore((s) => s.history)
+  const historyIds = useSessionStore((s) => s.historyIds)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const startNewSession = useSessionStore((s) => s.startNewSession)
   const { isStreaming, streamingText, activeTool, error, send } = useStream({
@@ -67,6 +68,7 @@ export default function DevPlaygroundPage() {
           activeTool={activeTool}
           error={error}
           onSend={send}
+          historyIds={historyIds}
           onSaveFavorite={async (turn) => {
             const record = await saveFavorite.mutateAsync({ session_id: currentSessionId, ...turn })
             return record.id

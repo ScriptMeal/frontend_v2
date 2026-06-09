@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { UseStreamReturn } from '@/hooks/useStream'
-import type { RecipeRecord } from '@/types'
+import type { RecipeRecord, FavoriteRecord } from '@/types'
 
 const mocks = vi.hoisted(() => ({
   send: vi.fn(),
@@ -16,6 +16,11 @@ const mocks = vi.hoisted(() => ({
   },
   history: {
     data: [] as RecipeRecord[],
+    isLoading: false,
+    isError: false,
+  },
+  favorites: {
+    data: [] as FavoriteRecord[],
     isLoading: false,
     isError: false,
   },
@@ -34,6 +39,12 @@ vi.mock('@/hooks/useStream', () => ({
 // 읽기 전용 모드는 useHistory 로 기록을 로드한다 — 라이브 테스트에선 호출되지 않는다.
 vi.mock('@/hooks/useHistory', () => ({
   useHistory: () => mocks.history,
+}))
+
+// useFavoritesForSession 만 모킹(네트워크 차단). 저장/삭제 훅은 실제 구현을 쓴다.
+vi.mock('@/hooks/useFavorites', async (importActual) => ({
+  ...(await importActual<typeof import('@/hooks/useFavorites')>()),
+  useFavoritesForSession: () => mocks.favorites,
 }))
 
 import ChatPage from './ChatPage'
@@ -62,9 +73,11 @@ beforeEach(() => {
   mocks.send.mockReset().mockResolvedValue(undefined)
   setStream({ isStreaming: false, streamingText: '', activeTool: null, error: null })
   mocks.history = { data: [], isLoading: false, isError: false }
+  mocks.favorites = { data: [], isLoading: false, isError: false }
   useSessionStore.setState({
     currentSessionId: 's1',
     history: [],
+    historyIds: {},
     sessions: [],
     pendingMessage: null,
   })
@@ -154,5 +167,50 @@ describe('ChatPage — 읽기 전용 (/chat/:sessionId)', () => {
     useSessionStore.setState({ pendingMessage: '떡볶이' })
     renderAt('/chat/s1')
     expect(mocks.send).not.toHaveBeenCalled()
+  })
+
+  it('즐겨찾기된 history_id 의 버블은 처음부터 저장됨으로 렌더한다 (happy)', () => {
+    mocks.history.data = [
+      {
+        id: 1,
+        session_id: 's1',
+        user_message: '떡볶이 먹고 싶어',
+        recipe_reply: '## 다이어트 떡볶이',
+        intent: 'SPECIFIC_FOOD',
+        created_at: '2026-06-02T00:00:00Z',
+      },
+    ]
+    // history_id 1 이 즐겨찾기에 존재 → 저장됨(해제) 상태로 그려져야 한다
+    mocks.favorites.data = [
+      {
+        id: 77,
+        history_id: 1,
+        session_id: 's1',
+        user_message: '떡볶이 먹고 싶어',
+        recipe_reply: '## 다이어트 떡볶이',
+        intent: 'SPECIFIC_FOOD',
+        created_at: '2026-06-02T00:00:00Z',
+      },
+    ]
+    renderAt('/chat/s1')
+
+    expect(screen.getByRole('button', { name: '즐겨찾기 해제' })).toBeInTheDocument()
+  })
+
+  it('즐겨찾기에 없는 history_id 의 버블은 즐겨찾기(미저장) 상태로 렌더한다 (edge)', () => {
+    mocks.history.data = [
+      {
+        id: 2,
+        session_id: 's1',
+        user_message: '저당 김밥',
+        recipe_reply: '## 저당 김밥',
+        intent: 'SPECIFIC_FOOD',
+        created_at: '2026-06-02T00:00:00Z',
+      },
+    ]
+    mocks.favorites.data = []
+    renderAt('/chat/s1')
+
+    expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeInTheDocument()
   })
 })

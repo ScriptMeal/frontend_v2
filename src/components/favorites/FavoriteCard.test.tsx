@@ -6,6 +6,7 @@ import type { FavoriteRecord } from '@/types'
 
 const favorite: FavoriteRecord = {
   id: 7,
+  history_id: 7,
   session_id: 's1',
   user_message: '떡볶이 먹고 싶어',
   recipe_reply: '## 다이어트 떡볶이\n\n- 곤약 떡',
