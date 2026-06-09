@@ -6,6 +6,7 @@ beforeEach(() => {
   useSessionStore.setState({
     currentSessionId: 'init',
     history: [],
+    historyIds: {},
     sessions: [],
     favoriteSessionIds: [],
     pendingMessage: null,
@@ -33,6 +34,41 @@ describe('sessionStore — 새 세션', () => {
     const { sessions } = useSessionStore.getState()
     expect(sessions).toHaveLength(1)
     expect(sessions[0].id).toBe('s1')
+  })
+})
+
+describe('sessionStore — historyIds (라이브 세션, 메시지 index → history_id)', () => {
+  it('recordHistoryId 는 메시지 index 에 history_id 를 기록한다 (happy)', () => {
+    useSessionStore.getState().recordHistoryId(1, 42)
+    useSessionStore.getState().recordHistoryId(3, 43)
+
+    expect(useSessionStore.getState().historyIds).toEqual({ 1: 42, 3: 43 })
+  })
+
+  it('startNewSession 은 historyIds 를 비운다 (edge)', () => {
+    useSessionStore.setState({ historyIds: { 1: 42 } })
+
+    useSessionStore.getState().startNewSession()
+
+    expect(useSessionStore.getState().historyIds).toEqual({})
+  })
+
+  it('clearSessions 도 historyIds 를 비운다 (edge)', () => {
+    useSessionStore.setState({ historyIds: { 1: 42 } })
+
+    useSessionStore.getState().clearSessions()
+
+    expect(useSessionStore.getState().historyIds).toEqual({})
+  })
+
+  it('historyIds 는 localStorage 에 persist 되지 않는다 (라이브 전용, edge)', () => {
+    useSessionStore.getState().recordHistoryId(1, 42)
+    useSessionStore
+      .getState()
+      .addSession({ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p' })
+
+    const parsed = JSON.parse(localStorage.getItem('scriptmeal-sessions')!)
+    expect(parsed.state).not.toHaveProperty('historyIds')
   })
 })
 

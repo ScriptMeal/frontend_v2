@@ -1,4 +1,4 @@
-import type { FavoriteRecord, SaveRecipePayload } from '@/types'
+import type { FavoriteRecord, SaveFavoritePayload } from '@/types'
 
 /**
  * DEV 전용 — 백엔드(localhost:8000) 없이 즐겨찾기 저장→조회→삭제 흐름을 시연하기 위한
@@ -11,6 +11,7 @@ let nextId = 100
 const seed: FavoriteRecord[] = [
   {
     id: 1,
+    history_id: 1,
     session_id: 'demo',
     user_message: '떡볶이 먹고 싶어',
     recipe_reply:
@@ -20,6 +21,7 @@ const seed: FavoriteRecord[] = [
   },
   {
     id: 2,
+    history_id: 2,
     session_id: 'demo',
     user_message: '오늘 날씨에 맞는 메뉴 추천해줘',
     recipe_reply:
@@ -38,7 +40,7 @@ export const mockFavoritesStore = {
       (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
     )
   },
-  add(payload: SaveRecipePayload): FavoriteRecord {
+  add(payload: SaveFavoritePayload): FavoriteRecord {
     const record: FavoriteRecord = {
       ...payload,
       id: nextId++,

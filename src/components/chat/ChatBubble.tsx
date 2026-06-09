@@ -15,6 +15,11 @@ interface Props {
   role: 'user' | 'assistant'
   content: string
   isStreaming?: boolean
+  /**
+   * 이미 즐겨찾기된 상태로 mount 할 때의 favorite id(읽기전용 채팅 진입 시).
+   * 있으면 처음부터 "저장됨" 으로 그려지고, 클릭 시 이 id 로 삭제한다.
+   */
+  initialFavoriteId?: number
   /** assistant 버블에 한해 즐겨찾기 버튼을 노출한다. 저장 성공 시 생성된 favorite id 를 반환한다. */
   onSaveFavorite?: () => Promise<number>
   /** 저장된 즐겨찾기를 해제(삭제)한다. 저장 시 받은 id 로 호출된다. */
@@ -25,11 +30,12 @@ export default function ChatBubble({
   role,
   content,
   isStreaming = false,
+  initialFavoriteId,
   onSaveFavorite,
   onDeleteFavorite,
 }: Props) {
   // 저장되면 favorite id 를 보유한다(=별 채움). 해제하면 null 로 되돌린다.
-  const [favoriteId, setFavoriteId] = useState<number | null>(null)
+  const [favoriteId, setFavoriteId] = useState<number | null>(initialFavoriteId ?? null)
   const [pending, setPending] = useState(false)
 
   if (role === 'user') {

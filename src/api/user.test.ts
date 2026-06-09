@@ -61,10 +61,12 @@ describe('saveFavorite', () => {
       user_message: 'x',
       recipe_reply: 'y',
       intent: 'GENERAL_RECIPE',
+      history_id: 5,
     })
     expect(mocks.post).toHaveBeenCalledWith('/api/favorites', expect.objectContaining({
       intent: 'GENERAL_RECIPE',
       recipe_reply: 'y',
+      history_id: 5,
     }))
   })
 })
@@ -110,6 +112,7 @@ describe('DEV 환경에서도 실제 client 를 호출한다', () => {
       user_message: 'x',
       recipe_reply: 'y',
       intent: 'OFF_TOPIC',
+      history_id: 5,
     })
     expect(mocks.post).toHaveBeenCalledWith('/api/favorites', expect.any(Object))
   })

@@ -77,6 +77,7 @@ const seeds: Seed[] = seedInputs.map((input, index) => ({
  */
 export const devFavoritesSeed: FavoriteRecord[] = seeds.map((seed) => ({
   id: seed.id,
+  history_id: seed.id,
   session_id: 'dev-session',
   user_message: seed.user_message,
   recipe_reply: replyOf(seed.scenarioId),

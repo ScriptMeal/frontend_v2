@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import ChatView from './ChatView'
 import type { Message } from '@/types'
 
@@ -27,14 +28,66 @@ describe('ChatView — 즐겨찾기 노출 조건 (intent 게이팅)', () => {
     { role: 'assistant', content: '## 떡볶이', intent },
   ]
 
-  it('intent 가 SPECIFIC_FOOD 면 즐겨찾기 버튼을 노출한다 (happy)', () => {
-    render(<ChatView history={turn('SPECIFIC_FOOD')} onSend={() => {}} onSaveFavorite={async () => 1} />)
+  it('intent 가 SPECIFIC_FOOD 이고 history_id 가 있으면 즐겨찾기 버튼을 노출한다 (happy)', () => {
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+      />,
+    )
     expect(screen.getByRole('button', { name: /즐겨찾기/ })).toBeInTheDocument()
   })
 
-  it('intent 가 GENERAL_RECIPE 면 즐겨찾기 버튼을 노출한다 (happy)', () => {
-    render(<ChatView history={turn('GENERAL_RECIPE')} onSend={() => {}} onSaveFavorite={async () => 1} />)
+  it('intent 가 GENERAL_RECIPE 이고 history_id 가 있으면 즐겨찾기 버튼을 노출한다 (happy)', () => {
+    render(
+      <ChatView
+        history={turn('GENERAL_RECIPE')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+      />,
+    )
     expect(screen.getByRole('button', { name: /즐겨찾기/ })).toBeInTheDocument()
+  })
+
+  it('intent 가 favoritable 이어도 history_id 가 없으면 버튼을 노출하지 않는다 (가드: POST 누락 차단)', () => {
+    render(
+      <ChatView history={turn('SPECIFIC_FOOD')} onSend={() => {}} onSaveFavorite={async () => 1} />,
+    )
+    expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
+  })
+
+  it('저장 시 turn 에 history_id 를 포함해 onSaveFavorite 를 호출한다 (happy)', async () => {
+    const user = userEvent.setup()
+    const onSaveFavorite = vi.fn().mockResolvedValue(1)
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 55 }}
+        onSend={() => {}}
+        onSaveFavorite={onSaveFavorite}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기에 저장' }))
+
+    expect(onSaveFavorite).toHaveBeenCalledWith(expect.objectContaining({ history_id: 55 }))
+  })
+
+  it('favoritedMap 에 있는 history_id 는 처음부터 저장됨 상태로 그린다 (happy)', () => {
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 55 }}
+        favoritedMap={new Map([[55, { history_id: 55, favorite_id: 99 }]])}
+        readOnly
+        onSaveFavorite={async () => 1}
+        onDeleteFavorite={() => {}}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '즐겨찾기 해제' })).toBeInTheDocument()
   })
 
   it('intent 가 OFF_TOPIC 면 즐겨찾기 버튼을 노출하지 않는다 (edge)', () => {

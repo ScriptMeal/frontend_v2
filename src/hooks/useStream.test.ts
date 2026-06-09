@@ -12,6 +12,7 @@ vi.mock('@/api/user', () => ({ saveHistory: mocks.saveHistory }))
 
 import { useStream } from './useStream'
 import { useSessionStore } from '@/store/sessionStore'
+import type { HistoryRecord } from '@/types'
 
 function makeStream(events: StreamEvent[]) {
   return (async function* () {
@@ -19,10 +20,23 @@ function makeStream(events: StreamEvent[]) {
   })()
 }
 
+function makeHistoryRecord(over: Partial<HistoryRecord> = {}): HistoryRecord {
+  return {
+    id: 1,
+    session_id: 's1',
+    user_message: 'u',
+    recipe_reply: 'r',
+    intent: 'OFF_TOPIC',
+    created_at: '2026-06-01T00:00:00Z',
+    ...over,
+  }
+}
+
 beforeEach(() => {
   mocks.streamChat.mockReset()
-  mocks.saveHistory.mockReset().mockResolvedValue(undefined)
-  useSessionStore.setState({ currentSessionId: 's1', history: [], sessions: [] })
+  // saveHistory 는 이제 생성된 HistoryRecord(id 포함)를 반환한다(라이브 history_id 출처)
+  mocks.saveHistory.mockReset().mockResolvedValue(makeHistoryRecord())
+  useSessionStore.setState({ currentSessionId: 's1', history: [], historyIds: {}, sessions: [] })
 })
 
 describe('useStream', () => {
@@ -135,6 +149,55 @@ describe('useStream', () => {
     )
   })
 
+  it('saveHistory 응답 id 를 assistant 메시지 index 에 기록한다 (happy)', async () => {
+    useSessionStore.setState({
+      currentSessionId: 's1',
+      history: [
+        { role: 'user', content: '이전' },
+        { role: 'assistant', content: '이전답' },
+      ],
+      historyIds: {},
+    })
+    mocks.saveHistory.mockResolvedValue(makeHistoryRecord({ id: 99 }))
+    mocks.streamChat.mockReturnValue(
+      makeStream([{ type: 'chunk', value: '본문' }, { type: 'done', value: '' }]),
+    )
+
+    const { result } = renderHook(() => useStream())
+    await act(async () => {
+      await result.current.send('새 질문')
+    })
+
+    // 이전 2건 뒤 user(2)·assistant(3) 추가 → assistant index = 3
+    expect(useSessionStore.getState().historyIds).toEqual({ 3: 99 })
+  })
+
+  it('history_id 기록은 saveHistory 완료(이중버블 가드: 임시버블 정리) 이후다 (가드)', async () => {
+    // saveHistory 호출 시점에 확정 버블은 이미 추가됐고, history_id 는 아직 미기록이어야 한다.
+    // (recordHistoryId 가 await 앞으로 새지 않음을 직접 검증 — 렌더 상태 재mutate 회귀 차단)
+    let idsAtSaveTime: Record<number, number> | null = null
+    let historyLenAtSaveTime = 0
+    mocks.saveHistory.mockImplementation(async () => {
+      idsAtSaveTime = { ...useSessionStore.getState().historyIds }
+      historyLenAtSaveTime = useSessionStore.getState().history.length
+      return makeHistoryRecord({ id: 7 })
+    })
+    mocks.streamChat.mockReturnValue(
+      makeStream([{ type: 'chunk', value: '본문' }, { type: 'done', value: '' }]),
+    )
+
+    const { result } = renderHook(() => useStream())
+    await act(async () => {
+      await result.current.send('질문')
+    })
+
+    // 저장 호출 시점: 확정 버블(user+assistant=2개) 존재, history_id 아직 미기록
+    expect(historyLenAtSaveTime).toBe(2)
+    expect(idsAtSaveTime).toEqual({})
+    // 저장 완료 후 비로소 기록됨 (assistant index = 1)
+    expect(useSessionStore.getState().historyIds).toEqual({ 1: 7 })
+  })
+
   it('스트림 에러 시 error 를 노출하고 저장하지 않으며 isStreaming 을 해제한다 (error)', async () => {
     mocks.streamChat.mockImplementation(() => {
       throw new Error('네트워크 오류')
@@ -156,7 +219,7 @@ describe('useStream', () => {
     const injectedStream = vi
       .fn()
       .mockReturnValue(makeStream([{ type: 'chunk', value: '주입됨' }, { type: 'done', value: '' }]))
-    const injectedSave = vi.fn().mockResolvedValue(undefined)
+    const injectedSave = vi.fn().mockResolvedValue(makeHistoryRecord())
 
     const { result } = renderHook(() =>
       useStream({ streamChat: injectedStream, saveHistory: injectedSave }),

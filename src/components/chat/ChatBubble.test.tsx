@@ -73,6 +73,38 @@ describe('ChatBubble — 즐겨찾기 토글', () => {
     expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeInTheDocument()
   })
 
+  it('initialFavoriteId 가 있으면 처음부터 저장됨(해제) 상태로 렌더한다 (happy)', () => {
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        initialFavoriteId={42}
+        onSaveFavorite={vi.fn()}
+        onDeleteFavorite={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '즐겨찾기 해제' })).toBeInTheDocument()
+  })
+
+  it('initialFavoriteId 로 저장된 별을 클릭하면 그 id 로 삭제한다 (happy)', async () => {
+    const user = userEvent.setup()
+    const onDeleteFavorite = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        initialFavoriteId={42}
+        onSaveFavorite={vi.fn()}
+        onDeleteFavorite={onDeleteFavorite}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기 해제' }))
+
+    expect(onDeleteFavorite).toHaveBeenCalledWith(42)
+    expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeInTheDocument()
+  })
+
   it('저장이 실패하면(예: 400 중복) 별을 채우지 않는다 (error)', async () => {
     const user = userEvent.setup()
     const onSaveFavorite = vi.fn().mockRejectedValue(new Error('400'))

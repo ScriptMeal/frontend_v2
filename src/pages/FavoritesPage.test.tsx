@@ -22,6 +22,7 @@ import FavoritesPage from './FavoritesPage'
 function makeFav(id: number, overrides: Partial<FavoriteRecord> = {}): FavoriteRecord {
   return {
     id,
+    history_id: id,
     session_id: 's1',
     user_message: `질문${id}`,
     recipe_reply: `## 답변${id}`,

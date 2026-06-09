@@ -30,7 +30,7 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
   const [activeTool, setActiveTool] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { currentSessionId, history, addMessage, addSession } = useSessionStore()
+  const { currentSessionId, history, addMessage, addSession, recordHistoryId } = useSessionStore()
 
   const send = useCallback(
     async (userMessage: string) => {
@@ -38,6 +38,9 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
       const historySnapshot = history
       // 첫 턴이면(이전 기록 없음) 저장 성공 후 사이드바 세션 목록에 등록
       const isFirstTurn = historySnapshot.length === 0
+      // 이번 턴 assistant 버블의 index: 스냅샷 뒤로 user(+1)·assistant 순서로 추가되므로 +1.
+      // 동시 전송이 끼어들어도 append-only라 기존 index 가 밀리지 않아 이 값은 불변이다.
+      const assistantIndex = historySnapshot.length + 1
 
       setIsStreaming(true)
       setError(null)
@@ -73,12 +76,15 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
             addMessage({ role: 'assistant', content: finalReply, intent })
             setIsStreaming(false)
             setStreamingText('')
-            await saveHistory({
+            const saved = await saveHistory({
               session_id: currentSessionId,
               user_message: userMessage,
               recipe_reply: finalReply,
               intent,
             })
+            // history_id 기록은 반드시 여기(await 이후)서만 — isStreaming 은 이미 false 라
+            // 임시 버블 조건이 꺼져 있어 슬라이스 갱신 리렌더가 이중 버블을 만들지 않는다.
+            if (saved) recordHistoryId(assistantIndex, saved.id)
             if (isFirstTurn) {
               addSession({
                 id: currentSessionId,
@@ -96,7 +102,7 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
         setActiveTool(null)
       }
     },
-    [currentSessionId, history, addMessage, addSession, streamChat, saveHistory],
+    [currentSessionId, history, addMessage, addSession, recordHistoryId, streamChat, saveHistory],
   )
 
   return { isStreaming, streamingText, activeTool, error, send }
