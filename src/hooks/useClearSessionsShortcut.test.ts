@@ -41,7 +41,7 @@ describe('useClearSessionsShortcut', () => {
     expect(s.sessions).toEqual([])
     expect(s.favoriteSessionIds).toEqual([])
     expect(s.history).toEqual([])
-    expect(mockNavigate).toHaveBeenCalledWith('/')
+    expect(mockNavigate).toHaveBeenCalledWith('/home')
   })
 
   it('Ctrl 없이 Alt+R 은 무시한다 (edge)', () => {
