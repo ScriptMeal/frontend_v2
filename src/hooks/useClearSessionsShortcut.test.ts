@@ -26,7 +26,7 @@ beforeEach(() => {
   useSessionStore.setState({
     sessions: [{ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p' }],
     favoriteSessionIds: ['s1'],
-    history: [{ role: 'user', content: 'hi' }],
+    history: [{ role: 'user', content: 'hi', clientId: 'u1' }],
     pendingMessage: null,
   })
 })

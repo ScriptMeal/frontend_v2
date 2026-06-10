@@ -102,8 +102,8 @@ describe('ChatPage — 라이브 (/chat)', () => {
   it('history 를 채팅 버블 리스트로 렌더한다', () => {
     useSessionStore.setState({
       history: [
-        { role: 'user', content: '안녕' },
-        { role: 'assistant', content: '## 안녕하세요' },
+        { role: 'user', content: '안녕', clientId: 'u1' },
+        { role: 'assistant', content: '## 안녕하세요', clientId: 'a1' },
       ],
     })
     renderAt('/chat')

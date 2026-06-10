@@ -112,7 +112,7 @@ export default function ChatView({
               const msg = history[group.idx]
               return (
                 <ChatBubble
-                  key={`single-${group.idx}-${msg.role}`}
+                  key={`single-${msg.clientId}`}
                   role={msg.role}
                   content={msg.content}
                 />
@@ -145,8 +145,10 @@ export default function ChatView({
             const initialFavoriteId =
               historyId != null ? favoritedMap?.get(historyId)?.favorite_id : undefined
 
-            // 안정적인 React key: history_id 가 있으면 그걸 쓰고, 없으면 userIdx 폴백
-            const pairKey = historyId != null ? `pair-hist-${historyId}` : `pair-idx-${group.userIdx}`
+            // 안정적인 React key: 메시지 생성 시 고정된 clientId 를 사용한다.
+            // history_id 는 saveHistory 이후에 도착하므로 key 에 쓰면 remount 가 발생한다.
+            // (.claude/debugging/20260610-streaming-confirm-bubble-remount.md 참고)
+            const pairKey = `pair-${userMsg.clientId}`
 
             return (
               <ChatPairGroup
