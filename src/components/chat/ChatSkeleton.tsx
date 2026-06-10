@@ -1,24 +1,30 @@
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
-/** 버블 한 줄의 자리표시 — 정렬/모서리는 실제 ChatBubble 을 모사한다. */
+/** 버블 한 줄의 자리표시 — 정렬/모서리는 실제 ChatBubble 을 모사한다.
+ *  실제 버블은 컨텐츠 길이로 너비가 정해지지만, 스켈레톤은 명시 고정 너비(`width`)를 받아
+ *  내용 없이도 일정한 채팅 프레임을 유지한다. */
 interface RowProps {
   side: 'assistant' | 'user'
-  widths: string[]
+  width: string
+  lines: string[]
 }
 
-function BubbleRow({ side, widths }: RowProps) {
+function BubbleRow({ side, width, lines }: RowProps) {
   const isAssistant = side === 'assistant'
   return (
     <div
       data-testid="chat-skeleton-bubble"
-      className={
+      className={cn(
+        'flex flex-col gap-2 rounded-lg px-4 py-3',
+        width,
         isAssistant
-          ? 'mr-auto flex max-w-[78%] flex-col gap-2 rounded-lg rounded-bl-none border border-hairline bg-surface px-4 py-3'
-          : 'ml-auto flex max-w-[60%] flex-col gap-2 rounded-lg rounded-br-none bg-surface-strong px-4 py-3'
-      }
+          ? 'mr-auto rounded-bl-none border border-hairline bg-surface'
+          : 'ml-auto rounded-br-none bg-surface-strong',
+      )}
     >
-      {widths.map((w, i) => (
-        <Skeleton key={i} className={`h-3.5 ${w} ${isAssistant ? '' : 'bg-hairline'}`} />
+      {lines.map((w, i) => (
+        <Skeleton key={i} className={cn('h-3.5', w, !isAssistant && 'bg-hairline')} />
       ))}
     </div>
   )
@@ -37,10 +43,10 @@ export default function ChatSkeleton() {
       className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6"
     >
       <span className="sr-only">대화 기록을 불러오는 중…</span>
-      <BubbleRow side="assistant" widths={['w-1/2', 'w-4/5']} />
-      <BubbleRow side="user" widths={['w-3/4']} />
-      <BubbleRow side="assistant" widths={['w-2/3', 'w-full', 'w-2/5']} />
-      <BubbleRow side="user" widths={['w-1/2']} />
+      <BubbleRow side="assistant" width="w-[72%]" lines={['w-1/2', 'w-4/5']} />
+      <BubbleRow side="user" width="w-[46%]" lines={['w-3/4']} />
+      <BubbleRow side="assistant" width="w-[78%]" lines={['w-2/3', 'w-full', 'w-2/5']} />
+      <BubbleRow side="user" width="w-[40%]" lines={['w-1/2']} />
     </div>
   )
 }
