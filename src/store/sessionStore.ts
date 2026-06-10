@@ -26,7 +26,7 @@ interface SessionState {
   startNewSession: () => void
   /** 영속된 세션 목록·즐겨찾기 인덱스를 모두 비우고 새 세션을 연다(시연용 빠른 초기화). */
   clearSessions: () => void
-  addMessage: (message: Message) => void
+  addMessage: (message: Omit<Message, 'clientId'> & { clientId?: string }) => void
   /** 라이브 세션에서 메시지 index 의 history_id 를 기록한다(saveHistory 응답 직후). */
   recordHistoryId: (index: number, historyId: number) => void
   setHistory: (history: Message[]) => void
@@ -81,7 +81,13 @@ export const useSessionStore = create<SessionState>()(
           pendingMessage: null,
         }),
 
-      addMessage: (message) => set((state) => ({ history: [...state.history, message] })),
+      addMessage: (message) =>
+        set((state) => ({
+          history: [
+            ...state.history,
+            { ...message, clientId: message.clientId ?? crypto.randomUUID() },
+          ],
+        })),
 
       recordHistoryId: (index, historyId) =>
         set((state) => ({ historyIds: { ...state.historyIds, [index]: historyId } })),

@@ -20,8 +20,8 @@ describe('recordToMessages', () => {
       makeRecord({ user_message: '떡볶이', recipe_reply: '## 떡볶이', intent: 'SPECIFIC_FOOD' }),
     ]
     expect(recordToMessages(records)).toEqual([
-      { role: 'user', content: '떡볶이' },
-      { role: 'assistant', content: '## 떡볶이', intent: 'SPECIFIC_FOOD' },
+      { role: 'user', content: '떡볶이', clientId: expect.any(String) },
+      { role: 'assistant', content: '## 떡볶이', intent: 'SPECIFIC_FOOD', clientId: expect.any(String) },
     ])
   })
 
@@ -32,10 +32,10 @@ describe('recordToMessages', () => {
       makeRecord({ id: 1, user_message: '첫째', recipe_reply: '첫째답' }),
     ]
     expect(recordToMessages(records)).toEqual([
-      { role: 'user', content: '첫째' },
-      { role: 'assistant', content: '첫째답', intent: 'OFF_TOPIC' },
-      { role: 'user', content: '둘째' },
-      { role: 'assistant', content: '둘째답', intent: 'OFF_TOPIC' },
+      { role: 'user', content: '첫째', clientId: expect.any(String) },
+      { role: 'assistant', content: '첫째답', intent: 'OFF_TOPIC', clientId: expect.any(String) },
+      { role: 'user', content: '둘째', clientId: expect.any(String) },
+      { role: 'assistant', content: '둘째답', intent: 'OFF_TOPIC', clientId: expect.any(String) },
     ])
   })
 

@@ -16,7 +16,7 @@ export function useClearSessionsShortcut() {
       if (e.ctrlKey && e.altKey && e.code === 'KeyR') {
         e.preventDefault()
         clearSessions()
-        navigate('/')
+        navigate('/home')
       }
     }
     window.addEventListener('keydown', onKeyDown)

@@ -6,6 +6,12 @@ export interface Message {
    * 채팅 요청(`/api/chat/stream`)의 history 에는 포함하지 않는다(role·content 만 전송).
    */
   intent?: Intent
+  /**
+   * 메시지 생성 시점에 고정되는 클라이언트 측 안정 식별자.
+   * React key 의 입력으로 사용해, history_id 도착 등 생애주기 도중 데이터 변경에 의한
+   * 의도치 않은 remount 를 방지한다. addMessage / recordToMessages 에서 자동 부여된다.
+   */
+  clientId: string
 }
 
 export interface Session {
@@ -60,5 +66,6 @@ export interface StreamEvent {
 /** POST /api/chat/stream 요청 본문 (session_id 미포함 — 세션은 프론트 전담) */
 export interface ChatRequest {
   message: string
-  history: Message[]
+  /** 요청에는 role·content 만 전송한다(intent·clientId 등 로컬 메타 제외). */
+  history: Pick<Message, 'role' | 'content'>[]
 }
