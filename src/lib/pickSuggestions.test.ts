@@ -12,61 +12,53 @@ const pool: SuggestionPool = {
 }
 
 describe('pickSuggestions', () => {
-  it('기본 count(3)만큼 반환한다 (happy)', () => {
+  it('기본값으로 3개를 반환한다 (happy)', () => {
     expect(pickSuggestions(pool)).toHaveLength(3)
   })
 
-  it('두 카테고리를 모두 최소 1개씩 포함한다 (여러 번 실행)', () => {
+  it('항상 specific_food 2 : general_recipe 1 비율을 지킨다 (여러 번 실행)', () => {
     for (let i = 0; i < RUNS; i++) {
-      const picked = pickSuggestions(pool, 3)
-      const intents = picked.map((q) => q.intent)
-      expect(intents).toContain('SPECIFIC_FOOD')
-      expect(intents).toContain('GENERAL_RECIPE')
+      const picked = pickSuggestions(pool)
+      const specific = picked.filter((q) => q.intent === 'SPECIFIC_FOOD')
+      const general = picked.filter((q) => q.intent === 'GENERAL_RECIPE')
+      expect(specific).toHaveLength(2)
+      expect(general).toHaveLength(1)
     }
   })
 
   it('결과에 중복이 없다 (여러 번 실행)', () => {
     for (let i = 0; i < RUNS; i++) {
-      const picked = pickSuggestions(pool, 3)
+      const picked = pickSuggestions(pool)
       const texts = picked.map((q) => q.text)
       expect(new Set(texts).size).toBe(texts.length)
     }
   })
 
-  it('count=2 면 카테고리 1:1 로 구성된다 (여러 번 실행)', () => {
-    for (let i = 0; i < RUNS; i++) {
-      const picked = pickSuggestions(pool, 2)
-      const specific = picked.filter((q) => q.intent === 'SPECIFIC_FOOD')
-      const general = picked.filter((q) => q.intent === 'GENERAL_RECIPE')
-      expect(specific).toHaveLength(1)
-      expect(general).toHaveLength(1)
-    }
+  it('카테고리별 개수를 직접 지정할 수 있다', () => {
+    const picked = pickSuggestions(pool, { specificFood: 3, generalRecipe: 2 })
+    expect(picked.filter((q) => q.intent === 'SPECIFIC_FOOD')).toHaveLength(3)
+    expect(picked.filter((q) => q.intent === 'GENERAL_RECIPE')).toHaveLength(2)
   })
 
-  it('풀 총량이 count보다 작으면 가능한 만큼만 반환한다 (edge)', () => {
-    const small: SuggestionPool = { specificFood: ['a'], generalRecipe: ['b'] }
-    expect(pickSuggestions(small, 3)).toHaveLength(2)
+  it('한 풀이 요청 개수보다 적어도 교차 채움 없이 가능한 만큼만 반환한다 (edge)', () => {
+    const small: SuggestionPool = { specificFood: ['a'], generalRecipe: ['b', 'c'] }
+    const picked = pickSuggestions(small, { specificFood: 2, generalRecipe: 1 })
+    // specific 풀이 1개뿐 → specific 1 + general 1 = 2개. 부족분을 general 로 메우지 않는다.
+    expect(picked.filter((q) => q.intent === 'SPECIFIC_FOOD')).toHaveLength(1)
+    expect(picked.filter((q) => q.intent === 'GENERAL_RECIPE')).toHaveLength(1)
+    expect(picked).toHaveLength(2)
   })
 
-  it('한 카테고리가 비어도 다른 카테고리에서 채운다 (edge)', () => {
-    const onlyFood: SuggestionPool = {
-      specificFood: ['a', 'b', 'c', 'd'],
-      generalRecipe: [],
-    }
-    const picked = pickSuggestions(onlyFood, 3)
+  it('0개로 지정한 카테고리는 포함하지 않는다 (경계)', () => {
+    const picked = pickSuggestions(pool, { specificFood: 0, generalRecipe: 2 })
+    expect(picked).toHaveLength(2)
+    expect(picked.every((q) => q.intent === 'GENERAL_RECIPE')).toBe(true)
+  })
+
+  it('실제 질문 풀로도 specific 2 + general 1 = 3개를 반환한다', () => {
+    const picked = pickSuggestions(suggestedQuestions)
     expect(picked).toHaveLength(3)
-    expect(picked.every((q) => q.intent === 'SPECIFIC_FOOD')).toBe(true)
-  })
-
-  it('count=0 이면 빈 배열을 반환한다 (경계)', () => {
-    expect(pickSuggestions(pool, 0)).toEqual([])
-  })
-
-  it('실제 질문 풀로도 두 카테고리를 포함해 3개를 반환한다', () => {
-    const picked = pickSuggestions(suggestedQuestions, 3)
-    expect(picked).toHaveLength(3)
-    const intents = picked.map((q) => q.intent)
-    expect(intents).toContain('SPECIFIC_FOOD')
-    expect(intents).toContain('GENERAL_RECIPE')
+    expect(picked.filter((q) => q.intent === 'SPECIFIC_FOOD')).toHaveLength(2)
+    expect(picked.filter((q) => q.intent === 'GENERAL_RECIPE')).toHaveLength(1)
   })
 })
