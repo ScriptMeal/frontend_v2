@@ -41,6 +41,22 @@ describe('HomePage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/chat')
   })
 
+  it('전송 시 새 세션을 발급해 이전 대화 잔여물을 비운다 (edge)', async () => {
+    useSessionStore.setState({
+      currentSessionId: 'old-session',
+      history: [{ role: 'user', content: '이전대화', clientId: 'u1' }],
+    })
+    const user = userEvent.setup()
+    renderHome()
+    await user.type(screen.getByLabelText('메시지 입력'), '새 레시피')
+    await user.click(screen.getByRole('button', { name: '전송' }))
+
+    const s = useSessionStore.getState()
+    expect(s.currentSessionId).not.toBe('old-session')
+    expect(s.history).toEqual([])
+    expect(s.pendingMessage).toBe('새 레시피')
+  })
+
   it('빈 입력으로는 이동하지 않는다 (edge)', async () => {
     const user = userEvent.setup()
     renderHome()

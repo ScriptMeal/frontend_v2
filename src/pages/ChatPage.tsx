@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
 import StateMessage from '@/components/common/StateMessage'
@@ -42,9 +42,15 @@ function LiveChat() {
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const consumePendingMessage = useSessionStore((s) => s.consumePendingMessage)
   const removeHistoryPair = useSessionStore((s) => s.removeHistoryPair)
+  const removeSession = useSessionStore((s) => s.removeSession)
   const { isStreaming, streamingText, activeTool, error, send } = useStream()
   const { onSaveFavorite, onDeleteFavorite } = useFavoriteHandlers(currentSessionId)
   const deleteHistory = useDeleteHistory()
+
+  // 라이브 채팅은 홈에서 메시지를 들고 진입할 때만 유효하다. 대기 메시지 보유 여부를
+  // mount 시점에 1회 포착해, 뒤로가기·새로고침·직접 URL 진입(대기 메시지 없음)이면 홈으로 보낸다.
+  // (effect 보다 먼저 평가되는 render-시점 읽기라, 아래 consume effect 가 비우기 전의 값을 본다.)
+  const [arrivedFromHome] = useState(() => useSessionStore.getState().pendingMessage !== null)
 
   // 홈→채팅 핸드오프: 진입 시 대기 메시지를 원자적으로 읽고 비운 뒤 1회만 전송.
   // StrictMode(개발) 가 effect 를 이중 호출해도 두 번째엔 스토어가 비어 null 을 받아 재전송하지 않는다.
@@ -56,7 +62,11 @@ function LiveChat() {
   const onDeleteHistory = async (historyId: number) => {
     await deleteHistory.mutateAsync(historyId)
     removeHistoryPair(historyId)
+    // 마지막 쌍까지 지워 세션이 비면 사이드바 목록·즐겨찾기 인덱스에서도 제거한다.
+    if (useSessionStore.getState().history.length === 0) removeSession(currentSessionId)
   }
+
+  if (!arrivedFromHome) return <Navigate to="/home" replace />
 
   return (
     <ChatView
@@ -94,10 +104,19 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
   )
   const { onSaveFavorite, onDeleteFavorite } = useFavoriteHandlers(sessionId)
   const deleteHistory = useDeleteHistory()
+  const removeSession = useSessionStore((s) => s.removeSession)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const onDeleteHistory = async (historyId: number) => {
     await deleteHistory.mutateAsync(historyId)
+    // 마지막 기록을 지워 세션이 비면 사이드바 목록·즐겨찾기 인덱스에서 제거하고 홈으로 보낸다
+    // (보여줄 대화가 없는 빈 읽기 전용 화면에 머무르지 않도록).
+    if ((data?.length ?? 0) <= 1) {
+      removeSession(sessionId)
+      navigate('/home')
+      return
+    }
     queryClient.invalidateQueries({ queryKey: ['history', sessionId] })
     // 삭제한 대화가 즐겨찾기돼 있었을 수 있으므로 즐겨찾기 캐시도 무효화해 정합을 맞춘다.
     queryClient.invalidateQueries({ queryKey: ['favorites', sessionId] })

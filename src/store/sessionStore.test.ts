@@ -176,6 +176,49 @@ describe('sessionStore — 즐겨찾기 보유 세션 인덱스 (favoriteSession
   })
 })
 
+describe('sessionStore — removeSession (빈 세션 정리)', () => {
+  it('해당 세션을 sessions·favoriteSessionIds 에서 동시에 제거한다 (happy)', () => {
+    useSessionStore.setState({
+      sessions: [
+        { id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p1' },
+        { id: 's2', createdAt: '2026-06-03T00:00:00Z', preview: 'p2' },
+      ],
+      favoriteSessionIds: ['s1', 's2'],
+    })
+
+    useSessionStore.getState().removeSession('s1')
+
+    const s = useSessionStore.getState()
+    expect(s.sessions.map((x) => x.id)).toEqual(['s2'])
+    expect(s.favoriteSessionIds).toEqual(['s2'])
+  })
+
+  it('즐겨찾기에 없는 세션도 sessions 에서만 제거된다 (edge)', () => {
+    useSessionStore.setState({
+      sessions: [{ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p1' }],
+      favoriteSessionIds: [],
+    })
+
+    useSessionStore.getState().removeSession('s1')
+
+    expect(useSessionStore.getState().sessions).toEqual([])
+    expect(useSessionStore.getState().favoriteSessionIds).toEqual([])
+  })
+
+  it('제거 결과가 localStorage 에 반영된다 (edge)', () => {
+    useSessionStore.setState({
+      sessions: [{ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p1' }],
+      favoriteSessionIds: ['s1'],
+    })
+
+    useSessionStore.getState().removeSession('s1')
+
+    const parsed = JSON.parse(localStorage.getItem('scriptmeal-sessions')!)
+    expect(parsed.state.sessions).toEqual([])
+    expect(parsed.state.favoriteSessionIds).toEqual([])
+  })
+})
+
 describe('sessionStore — clearSessions (단축키 초기화)', () => {
   it('sessions·favoriteSessionIds·history 를 비우고 새 세션을 연다 (happy)', () => {
     useSessionStore.setState({

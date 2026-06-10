@@ -31,6 +31,11 @@ interface SessionState {
   recordHistoryId: (index: number, historyId: number) => void
   setHistory: (history: Message[]) => void
   addSession: (session: Session) => void
+  /**
+   * 세션을 사이드바 목록(`sessions`)·즐겨찾기 인덱스(`favoriteSessionIds`)에서 함께 제거한다.
+   * 마지막 대화 기록을 삭제해 세션이 비었을 때 호출한다(빈 세션 잔류 방지).
+   */
+  removeSession: (sessionId: string) => void
   markSessionFavorited: (sessionId: string) => void
   unmarkSessionFavorited: (sessionId: string) => void
   setPendingMessage: (message: string) => void
@@ -97,6 +102,12 @@ export const useSessionStore = create<SessionState>()(
       addSession: (session) =>
         set((state) => ({
           sessions: [session, ...state.sessions.filter((s) => s.id !== session.id)],
+        })),
+
+      removeSession: (sessionId) =>
+        set((state) => ({
+          sessions: state.sessions.filter((s) => s.id !== sessionId),
+          favoriteSessionIds: state.favoriteSessionIds.filter((id) => id !== sessionId),
         })),
 
       markSessionFavorited: (sessionId) =>
