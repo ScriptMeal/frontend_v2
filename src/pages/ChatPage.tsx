@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
+import ChatSkeleton from '@/components/chat/ChatSkeleton'
 import StateMessage from '@/components/common/StateMessage'
 import { useStream } from '@/hooks/useStream'
 import { useHistory, useDeleteHistory } from '@/hooks/useHistory'
@@ -107,8 +108,8 @@ function ReadOnlyChat({ sessionId }: { sessionId: string }) {
   // (즐겨찾기 조회 실패는 치명적이지 않다 — 빈 맵으로 진행해 본문은 정상 노출)
   if (isLoading || favorites.isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <StateMessage variant="loading">대화 기록을 불러오는 중…</StateMessage>
+      <div className="h-full overflow-y-auto">
+        <ChatSkeleton />
       </div>
     )
   }

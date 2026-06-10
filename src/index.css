@@ -41,6 +41,26 @@
     background: radial-gradient(circle at center, #fecdd3, #fda4af);
   }
 
+  /* 스켈레톤 shimmer — 회색 베이스 위로 밝은 띠가 좌→우로 흐른다 (Skeleton 베이스 블록)
+     prefers-reduced-motion 시 아래 전역 규칙이 ::after 를 화면 밖에 고정해 정적 회색으로 남긴다 */
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.65) 50%,
+      transparent 100%
+    );
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
   /* 채팅 로딩 인디케이터 — 점이 하나씩 누적됐다 한 번에 사라지는 루프 (ToolIndicator) */
   .loading-dots {
     display: inline-flex;
@@ -61,6 +81,12 @@
 }
 
 /* @keyframes 는 @layer 밖 최상위에 둔다 — 레이어 안에 있으면 일부 브라우저가 애니메이션 이름을 해석하지 못한다 */
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* 한 사이클: 점1 → 점1·2 → 점1·2·3 → (전부 사라짐) → 반복 */
 @keyframes loading-dot-1 {
   0%,

@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSessionStore } from './sessionStore'
+import type { Message } from '@/types'
+
+// content 를 그대로 clientId 로 쓰는 결정적 헬퍼. removeHistoryPair 처럼 메시지 객체를
+// 그대로 보존하는 동작을 toEqual 로 검증할 때 입력·기대값의 clientId 가 일치한다.
+const m = (role: Message['role'], content: string): Message => ({ role, content, clientId: content })
 
 beforeEach(() => {
   localStorage.clear()
@@ -15,7 +20,7 @@ beforeEach(() => {
 
 describe('sessionStore — 새 세션', () => {
   it('startNewSession 은 새 id·빈 history 로 라이브 세션을 연다 (happy)', () => {
-    useSessionStore.setState({ history: [{ role: 'user', content: 'x' }] })
+    useSessionStore.setState({ history: [m('user', 'x')] })
     const prevId = useSessionStore.getState().currentSessionId
 
     useSessionStore.getState().startNewSession()
@@ -34,6 +39,32 @@ describe('sessionStore — 새 세션', () => {
     const { sessions } = useSessionStore.getState()
     expect(sessions).toHaveLength(1)
     expect(sessions[0].id).toBe('s1')
+  })
+})
+
+describe('sessionStore — addMessage (안정적 clientId 부여)', () => {
+  it('메시지에 문자열 clientId 를 부여한다 (happy)', () => {
+    useSessionStore.getState().addMessage({ role: 'user', content: 'q' })
+
+    const [m] = useSessionStore.getState().history
+    expect(m).toMatchObject({ role: 'user', content: 'q' })
+    expect(typeof m.clientId).toBe('string')
+    expect(m.clientId).toBeTruthy()
+  })
+
+  it('연속 추가된 메시지는 서로 다른 clientId 를 갖는다 (edge)', () => {
+    useSessionStore.getState().addMessage({ role: 'user', content: 'a' })
+    useSessionStore.getState().addMessage({ role: 'assistant', content: 'b' })
+
+    const [m1, m2] = useSessionStore.getState().history
+    expect(m1.clientId).toBeTruthy()
+    expect(m1.clientId).not.toBe(m2.clientId)
+  })
+
+  it('호출자가 clientId 를 지정하면 그대로 보존한다 (edge)', () => {
+    useSessionStore.getState().addMessage({ role: 'user', content: 'q', clientId: 'fixed-id' })
+
+    expect(useSessionStore.getState().history[0].clientId).toBe('fixed-id')
   })
 })
 
@@ -89,7 +120,7 @@ describe('sessionStore — localStorage 영속화 (persist)', () => {
   it('sessions·favoriteSessionIds 만 persist 하고 history·currentSessionId 는 저장하지 않는다 (partialize, edge)', () => {
     useSessionStore.setState({
       currentSessionId: 'live-xyz',
-      history: [{ role: 'user', content: 'hi' }],
+      history: [m('user', 'hi')],
     })
     useSessionStore
       .getState()
@@ -150,7 +181,7 @@ describe('sessionStore — clearSessions (단축키 초기화)', () => {
     useSessionStore.setState({
       sessions: [{ id: 's1', createdAt: '2026-06-02T00:00:00Z', preview: 'p' }],
       favoriteSessionIds: ['s1'],
-      history: [{ role: 'user', content: 'hi' }],
+      history: [m('user', 'hi')],
       pendingMessage: 'x',
     })
     const prevId = useSessionStore.getState().currentSessionId
@@ -208,10 +239,10 @@ describe('sessionStore — removeHistoryPair (히스토리 쌍 삭제)', () => {
   it('historyId 에 해당하는 user+assistant 쌍을 history 에서 제거한다 (happy)', () => {
     useSessionStore.setState({
       history: [
-        { role: 'user', content: 'q1' },
-        { role: 'assistant', content: 'a1' },
-        { role: 'user', content: 'q2' },
-        { role: 'assistant', content: 'a2' },
+        m('user', 'q1'),
+        m('assistant', 'a1'),
+        m('user', 'q2'),
+        m('assistant', 'a2'),
       ],
       historyIds: { 1: 10, 3: 20 },
     })
@@ -219,19 +250,13 @@ describe('sessionStore — removeHistoryPair (히스토리 쌍 삭제)', () => {
     useSessionStore.getState().removeHistoryPair(10)
 
     const { history, historyIds } = useSessionStore.getState()
-    expect(history).toEqual([
-      { role: 'user', content: 'q2' },
-      { role: 'assistant', content: 'a2' },
-    ])
+    expect(history).toEqual([m('user', 'q2'), m('assistant', 'a2')])
     expect(historyIds).toEqual({ 1: 20 })
   })
 
   it('마지막 쌍을 삭제하면 history 가 비워진다 (edge)', () => {
     useSessionStore.setState({
-      history: [
-        { role: 'user', content: 'q1' },
-        { role: 'assistant', content: 'a1' },
-      ],
+      history: [m('user', 'q1'), m('assistant', 'a1')],
       historyIds: { 1: 10 },
     })
 
@@ -244,12 +269,12 @@ describe('sessionStore — removeHistoryPair (히스토리 쌍 삭제)', () => {
   it('중간 쌍을 삭제하면 뒤 쌍의 historyIds 인덱스를 -2 당겨 재색인한다 (edge)', () => {
     useSessionStore.setState({
       history: [
-        { role: 'user', content: 'q1' },
-        { role: 'assistant', content: 'a1' },
-        { role: 'user', content: 'q2' },
-        { role: 'assistant', content: 'a2' },
-        { role: 'user', content: 'q3' },
-        { role: 'assistant', content: 'a3' },
+        m('user', 'q1'),
+        m('assistant', 'a1'),
+        m('user', 'q2'),
+        m('assistant', 'a2'),
+        m('user', 'q3'),
+        m('assistant', 'a3'),
       ],
       historyIds: { 1: 10, 3: 20, 5: 30 },
     })
@@ -263,11 +288,7 @@ describe('sessionStore — removeHistoryPair (히스토리 쌍 삭제)', () => {
 
   it('바로 앞이 user 가 아니면(정합 깨짐) assistant 만 제거하고 무관한 메시지를 지키지 않는다 (edge, 방어)', () => {
     useSessionStore.setState({
-      history: [
-        { role: 'assistant', content: 'orphan-a' },
-        { role: 'user', content: 'q1' },
-        { role: 'assistant', content: 'a1' },
-      ],
+      history: [m('assistant', 'orphan-a'), m('user', 'q1'), m('assistant', 'a1')],
       historyIds: { 0: 10, 2: 20 },
     })
 
@@ -275,18 +296,12 @@ describe('sessionStore — removeHistoryPair (히스토리 쌍 삭제)', () => {
 
     const { history, historyIds } = useSessionStore.getState()
     // orphan assistant(index 0)만 제거 — 뒤 쌍(q1+a1)은 보존하고 인덱스를 -1 당긴다.
-    expect(history).toEqual([
-      { role: 'user', content: 'q1' },
-      { role: 'assistant', content: 'a1' },
-    ])
+    expect(history).toEqual([m('user', 'q1'), m('assistant', 'a1')])
     expect(historyIds).toEqual({ 1: 20 })
   })
 
   it('존재하지 않는 historyId 면 상태가 변하지 않는다 (edge)', () => {
-    const initialHistory = [
-      { role: 'user', content: 'q1' } as const,
-      { role: 'assistant', content: 'a1' } as const,
-    ]
+    const initialHistory = [m('user', 'q1'), m('assistant', 'a1')]
     useSessionStore.setState({ history: initialHistory, historyIds: { 1: 10 } })
 
     useSessionStore.getState().removeHistoryPair(999)

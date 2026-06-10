@@ -44,8 +44,8 @@ describe('useStream', () => {
     useSessionStore.setState({
       currentSessionId: 's1',
       history: [
-        { role: 'user', content: '이전' },
-        { role: 'assistant', content: '이전답' },
+        { role: 'user', content: '이전', clientId: 'prev-u' },
+        { role: 'assistant', content: '이전답', clientId: 'prev-a' },
       ],
     })
     mocks.streamChat.mockReturnValue(
@@ -73,10 +73,10 @@ describe('useStream', () => {
 
     const finalReply = '## 떡볶이\n- 곤약\n\n구매정보'
     expect(useSessionStore.getState().history).toEqual([
-      { role: 'user', content: '이전' },
-      { role: 'assistant', content: '이전답' },
-      { role: 'user', content: '떡볶이' },
-      { role: 'assistant', content: finalReply, intent: 'SPECIFIC_FOOD' },
+      { role: 'user', content: '이전', clientId: 'prev-u' },
+      { role: 'assistant', content: '이전답', clientId: 'prev-a' },
+      { role: 'user', content: '떡볶이', clientId: expect.any(String) },
+      { role: 'assistant', content: finalReply, intent: 'SPECIFIC_FOOD', clientId: expect.any(String) },
     ])
     expect(mocks.saveHistory).toHaveBeenCalledExactlyOnceWith({
       session_id: 's1',
@@ -108,8 +108,8 @@ describe('useStream', () => {
   it('이전 턴이 있으면(첫 턴이 아니면) 세션을 다시 등록하지 않는다 (edge)', async () => {
     useSessionStore.setState({
       history: [
-        { role: 'user', content: '이전' },
-        { role: 'assistant', content: '이전답' },
+        { role: 'user', content: '이전', clientId: 'prev-u' },
+        { role: 'assistant', content: '이전답', clientId: 'prev-a' },
       ],
       sessions: [{ id: 's1', createdAt: '2026-06-01T00:00:00Z', preview: '이전' }],
     })
@@ -141,8 +141,8 @@ describe('useStream', () => {
     })
 
     expect(useSessionStore.getState().history).toEqual([
-      { role: 'user', content: '질문' },
-      { role: 'assistant', content: '본문만', intent: 'OFF_TOPIC' },
+      { role: 'user', content: '질문', clientId: expect.any(String) },
+      { role: 'assistant', content: '본문만', intent: 'OFF_TOPIC', clientId: expect.any(String) },
     ])
     expect(mocks.saveHistory).toHaveBeenCalledWith(
       expect.objectContaining({ recipe_reply: '본문만', intent: 'OFF_TOPIC' }),
@@ -153,8 +153,8 @@ describe('useStream', () => {
     useSessionStore.setState({
       currentSessionId: 's1',
       history: [
-        { role: 'user', content: '이전' },
-        { role: 'assistant', content: '이전답' },
+        { role: 'user', content: '이전', clientId: 'prev-u' },
+        { role: 'assistant', content: '이전답', clientId: 'prev-a' },
       ],
       historyIds: {},
     })
@@ -212,7 +212,7 @@ describe('useStream', () => {
     expect(result.current.isStreaming).toBe(false)
     expect(mocks.saveHistory).not.toHaveBeenCalled()
     // 낙관적으로 추가된 user 메시지는 남는다
-    expect(useSessionStore.getState().history).toEqual([{ role: 'user', content: 'x' }])
+    expect(useSessionStore.getState().history).toEqual([{ role: 'user', content: 'x', clientId: expect.any(String) }])
   })
 
   it('의존성 주입(deps) 시 기본 import 대신 주입된 streamChat·saveHistory 를 쓴다 (DI)', async () => {
@@ -237,6 +237,7 @@ describe('useStream', () => {
       role: 'assistant',
       content: '주입됨',
       intent: 'OFF_TOPIC',
+      clientId: expect.any(String),
     })
   })
 })

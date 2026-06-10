@@ -4,9 +4,14 @@ import userEvent from '@testing-library/user-event'
 import ChatView from './ChatView'
 import type { Message } from '@/types'
 
+let _id = 0
+function msg(override: Omit<Message, 'clientId'>): Message {
+  return { ...override, clientId: `test-${++_id}` }
+}
+
 const history: Message[] = [
-  { role: 'user', content: '떡볶이' },
-  { role: 'assistant', content: '## 떡볶이' },
+  msg({ role: 'user', content: '떡볶이' }),
+  msg({ role: 'assistant', content: '## 떡볶이' }),
 ]
 
 describe('ChatView — readOnly', () => {
@@ -24,8 +29,8 @@ describe('ChatView — readOnly', () => {
 
 describe('ChatView — 즐겨찾기 노출 조건 (intent 게이팅)', () => {
   const turn = (intent: Message['intent']): Message[] => [
-    { role: 'user', content: '떡볶이' },
-    { role: 'assistant', content: '## 떡볶이', intent },
+    msg({ role: 'user', content: '떡볶이' }),
+    msg({ role: 'assistant', content: '## 떡볶이', intent }),
   ]
 
   it('intent 가 SPECIFIC_FOOD 이고 history_id 가 있으면 즐겨찾기 버튼을 노출한다 (happy)', () => {
@@ -151,8 +156,8 @@ describe('ChatView — role 기준 페어링 (정합 깨짐 방어)', () => {
   it('연속된 user 메시지를 각각 user 버블로 렌더한다 — 위치 기반 묶기로 assistant 둔갑 방지 (regression)', () => {
     // 스트림 에러 후 재전송 등으로 user 가 연달아 쌓인 상황.
     const broken: Message[] = [
-      { role: 'user', content: '## 첫질문' },
-      { role: 'user', content: '## 둘째질문' },
+      msg({ role: 'user', content: '## 첫질문' }),
+      msg({ role: 'user', content: '## 둘째질문' }),
     ]
     render(<ChatView history={broken} onSend={() => {}} />)
     // user 버블은 마크다운을 렌더하지 않는다 — heading 이 생기면 assistant 로 잘못 그려진 것.
@@ -162,9 +167,9 @@ describe('ChatView — role 기준 페어링 (정합 깨짐 방어)', () => {
 
   it('마지막 user 메시지가 짝이 없어도(스트리밍 직전) 단독 user 버블로 렌더하고 삭제 대상에서 제외한다 (edge)', () => {
     const odd: Message[] = [
-      { role: 'user', content: '질문1' },
-      { role: 'assistant', content: '## 답변1' },
-      { role: 'user', content: '질문2' },
+      msg({ role: 'user', content: '질문1' }),
+      msg({ role: 'assistant', content: '## 답변1' }),
+      msg({ role: 'user', content: '질문2' }),
     ]
     render(
       <ChatView

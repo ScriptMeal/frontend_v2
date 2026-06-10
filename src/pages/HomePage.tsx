@@ -11,7 +11,8 @@ export default function HomePage() {
   const navigate = useNavigate()
   const setPendingMessage = useSessionStore((s) => s.setPendingMessage)
   // 마운트당 1회만 추첨해 고정 — 매 렌더 재추첨 방지(결정 20260604-home-suggested-questions)
-  const [suggestions] = useState(() => pickSuggestions(suggestedQuestions, 3))
+  // 기본 비율 specific 2 : general 1 로 추첨한다(pickSuggestions 기본값).
+  const [suggestions] = useState(() => pickSuggestions(suggestedQuestions))
 
   const handleSubmit = (message: string) => {
     setPendingMessage(message)

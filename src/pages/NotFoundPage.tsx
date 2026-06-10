@@ -20,7 +20,7 @@ export default function NotFoundPage() {
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">
         주소가 바뀌었거나 삭제된 페이지일 수 있어요. 홈에서 새 레시피를 찾아보세요.
       </p>
-      <Button className="mt-8" onClick={() => navigate('/')}>
+      <Button className="mt-8" onClick={() => navigate('/home')}>
         홈으로 돌아가기
       </Button>
     </div>
