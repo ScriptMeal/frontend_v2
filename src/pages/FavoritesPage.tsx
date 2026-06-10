@@ -1,6 +1,7 @@
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
 import FavoritesGrid from '@/components/favorites/FavoritesGrid'
+import FavoritesGridSkeleton from '@/components/favorites/FavoritesGridSkeleton'
 import { useAllFavorites, useDeleteFavorite } from '@/hooks/useFavorites'
 
 export default function FavoritesPage() {
@@ -25,7 +26,7 @@ export default function FavoritesPage() {
           <p className="mt-1 text-sm text-muted-foreground">저장한 레시피를 모아봤어요.</p>
         </header>
 
-        {isLoading && <StateMessage variant="loading">불러오는 중…</StateMessage>}
+        {isLoading && <FavoritesGridSkeleton />}
 
         {isError && (
           <StateMessage variant="error">즐겨찾기를 불러오지 못했습니다.</StateMessage>
