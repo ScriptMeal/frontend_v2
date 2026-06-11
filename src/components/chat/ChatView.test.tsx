@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ChatView from './ChatView'
 import type { Message } from '@/types'
@@ -194,5 +194,98 @@ describe('ChatView — 빈 상태', () => {
   it('스트리밍 중이면 빈 안내를 보여주지 않는다 (edge)', () => {
     render(<ChatView history={[]} isStreaming streamingText="## 떡" onSend={() => {}} />)
     expect(screen.queryByText(/레시피 대화를 시작/)).not.toBeInTheDocument()
+  })
+})
+
+describe('ChatView — 모바일 컨텍스트 메뉴 (coarse 포인터)', () => {
+  const turn = (intent: Message['intent']): Message[] => [
+    msg({ role: 'user', content: '떡볶이' }),
+    msg({ role: 'assistant', content: '## 떡볶이', intent }),
+  ]
+
+  // coarse 포인터 환경을 흉내낸다(jsdom 은 matchMedia 미구현).
+  beforeEach(() => {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      media: '(pointer: coarse)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }) as unknown as typeof window.matchMedia
+  })
+  afterEach(() => {
+    // @ts-expect-error 테스트 격리
+    delete window.matchMedia
+    vi.useRealTimers()
+  })
+
+  it('모바일에선 하단 즐겨찾기 버튼을 숨긴다 (happy)', () => {
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+        onDeleteFavorite={() => {}}
+        onDeleteHistory={() => {}}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
+  })
+
+  it('저장된 턴은 저장 인디케이터를 보인다 (happy)', () => {
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        favoritedMap={new Map([[10, { history_id: 10, favorite_id: 99 }]])}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+        onDeleteFavorite={() => {}}
+        onDeleteHistory={() => {}}
+      />,
+    )
+    expect(screen.getByTestId('saved-indicator')).toBeInTheDocument()
+  })
+
+  it('길게 누르면 즐겨찾기·삭제 컨텍스트 메뉴가 열린다 (happy)', () => {
+    vi.useFakeTimers()
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+        onDeleteFavorite={() => {}}
+        onDeleteHistory={() => {}}
+      />,
+    )
+    const group = screen.getByRole('group')
+    fireEvent.pointerDown(group, { pointerType: 'touch', clientX: 0, clientY: 0 })
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(screen.getByRole('button', { name: '삭제하기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '즐겨찾기' })).toBeInTheDocument()
+  })
+
+  it('손을 떼면(짧게 탭) 메뉴가 열리지 않는다 (edge)', () => {
+    vi.useFakeTimers()
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+        onDeleteFavorite={() => {}}
+        onDeleteHistory={() => {}}
+      />,
+    )
+    const group = screen.getByRole('group')
+    fireEvent.pointerDown(group, { pointerType: 'touch', clientX: 0, clientY: 0 })
+    fireEvent.pointerUp(group)
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(screen.queryByRole('button', { name: '삭제하기' })).not.toBeInTheDocument()
   })
 })

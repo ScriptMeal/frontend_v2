@@ -62,6 +62,35 @@ describe('ChatBubble — footerAction (즐겨찾기 옆 추가 액션)', () => {
   })
 })
 
+describe('ChatBubble — saved 인디케이터 (모바일, 푸터 없이 저장 표시)', () => {
+  it('saved 이고 즐겨찾기 버튼이 없으면 비-인터랙티브 저장 인디케이터를 노출한다 (happy)', () => {
+    render(<ChatBubble role="assistant" content="## 떡볶이" saved />)
+    expect(screen.getByTestId('saved-indicator')).toBeInTheDocument()
+    // 버튼이 아니라 표시일 뿐 — 토글 버튼은 없다
+    expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
+  })
+
+  it('saved 가 아니면 인디케이터를 노출하지 않는다 (edge)', () => {
+    render(<ChatBubble role="assistant" content="## 떡볶이" />)
+    expect(screen.queryByTestId('saved-indicator')).not.toBeInTheDocument()
+  })
+
+  it('즐겨찾기 버튼(푸터)이 있으면 인디케이터를 그리지 않는다 — 푸터가 우선 (edge)', () => {
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        saved
+        initialFavoriteId={1}
+        onSaveFavorite={vi.fn()}
+        onDeleteFavorite={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '즐겨찾기 해제' })).toBeInTheDocument()
+    expect(screen.queryByTestId('saved-indicator')).not.toBeInTheDocument()
+  })
+})
+
 describe('ChatBubble — 즐겨찾기 토글', () => {
   it('클릭하면 저장하고 별이 채워진다(해제 상태로 전환) (happy)', async () => {
     const user = userEvent.setup()

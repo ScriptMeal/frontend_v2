@@ -38,7 +38,7 @@ export default function StepsSection() {
           {steps.map(({ number, title, description }, i) => (
             <div
               key={number}
-              className="grid grid-cols-2 items-center gap-12 py-14 first:pt-0 last:pb-0"
+              className="grid grid-cols-1 items-center gap-8 py-10 first:pt-0 last:pb-0 sm:grid-cols-2 sm:gap-12 sm:py-14"
             >
               {/* 좌: 설명 */}
               <motion.div
