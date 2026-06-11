@@ -30,7 +30,7 @@ describe('HomePage', () => {
     expect(screen.getByLabelText('메시지 입력')).toBeInTheDocument()
   })
 
-  it('첫 메시지 전송 시 pendingMessage 에 적재하고 /chat 으로 이동한다 (history 직접 적재 안 함)', async () => {
+  it('첫 메시지 전송 시 pendingMessage 적재 + 새 세션 id 로 /chat/:id 이동 (history 직접 적재 안 함)', async () => {
     const user = userEvent.setup()
     renderHome()
     await user.type(screen.getByLabelText('메시지 입력'), '떡볶이 먹고 싶어')
@@ -38,7 +38,9 @@ describe('HomePage', () => {
     expect(useSessionStore.getState().pendingMessage).toBe('떡볶이 먹고 싶어')
     // history 적재는 useStream(ChatPage)이 전담 — 홈에서 미리 넣지 않는다
     expect(useSessionStore.getState().history).toEqual([])
-    expect(mockNavigate).toHaveBeenCalledWith('/chat')
+    // 새로 발급된 세션 id 로 라우팅 → ChatPage 가 그 세션을 하이드레이션·핸드오프한다
+    const newId = useSessionStore.getState().currentSessionId
+    expect(mockNavigate).toHaveBeenCalledWith(`/chat/${newId}`)
   })
 
   it('전송 시 새 세션을 발급해 이전 대화 잔여물을 비운다 (edge)', async () => {

@@ -31,6 +31,14 @@ describe('sessionStore — 새 세션', () => {
     expect(s.pendingMessage).toBeNull()
   })
 
+  it('startNewSession 은 생성한 새 id 를 반환한다 (홈→채팅 라우팅용, happy)', () => {
+    const returned = useSessionStore.getState().startNewSession()
+
+    expect(returned).toBe(useSessionStore.getState().currentSessionId)
+    expect(typeof returned).toBe('string')
+    expect(returned).toBeTruthy()
+  })
+
   it('addSession 은 세션을 최신순으로 추가하고 같은 id 를 중복하지 않는다 (edge)', () => {
     const session = { id: 's1', createdAt: '2026-06-01T00:00:00Z', preview: '첫 메시지' }
     useSessionStore.getState().addSession(session)
@@ -39,6 +47,34 @@ describe('sessionStore — 새 세션', () => {
     const { sessions } = useSessionStore.getState()
     expect(sessions).toHaveLength(1)
     expect(sessions[0].id).toBe('s1')
+  })
+})
+
+describe('sessionStore — loadSession (과거 세션 하이드레이션, 세션당 1회)', () => {
+  it('currentSessionId·history·historyIds 를 한 번에 적재한다 (happy)', () => {
+    const messages = [m('user', 'q1'), m('assistant', 'a1')]
+
+    useSessionStore.getState().loadSession('past-1', messages, { 1: 10 })
+
+    const s = useSessionStore.getState()
+    expect(s.currentSessionId).toBe('past-1')
+    expect(s.history).toEqual(messages)
+    expect(s.historyIds).toEqual({ 1: 10 })
+  })
+
+  it('이전 라이브 세션 상태를 완전히 덮어쓴다 (세션 전환, edge)', () => {
+    useSessionStore.setState({
+      currentSessionId: 'live',
+      history: [m('user', 'old')],
+      historyIds: { 1: 99 },
+    })
+
+    useSessionStore.getState().loadSession('past-2', [], {})
+
+    const s = useSessionStore.getState()
+    expect(s.currentSessionId).toBe('past-2')
+    expect(s.history).toEqual([])
+    expect(s.historyIds).toEqual({})
   })
 })
 

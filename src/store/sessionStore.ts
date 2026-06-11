@@ -23,7 +23,15 @@ interface SessionState {
   favoriteSessionIds: string[]
   /** 홈→채팅 핸드오프: 채팅 진입 시 자동 전송할 첫 메시지 */
   pendingMessage: string | null
-  startNewSession: () => void
+  /** 새 세션을 열고 생성한 새 id 를 반환한다(홈→`/chat/:id` 라우팅에 사용). */
+  startNewSession: () => string
+  /**
+   * 과거 세션을 스토어에 적재(하이드레이션)한다 — currentSessionId·history·historyIds 를 한 번에 교체.
+   * `GET /api/history` 로 받은 레코드를 메시지로 평탄화한 뒤 호출한다. 진입한 세션을
+   * 라이브 세션으로 승격시켜, 그 위에서 이어쓰기(스트리밍)가 가능해진다.
+   * 같은 세션을 반복 적재하지 않도록(라이브 상태 덮어쓰기 방지) 호출부에서 세션당 1회만 호출한다.
+   */
+  loadSession: (sessionId: string, history: Message[], historyIds: Record<number, number>) => void
   /** 영속된 세션 목록·즐겨찾기 인덱스를 모두 비우고 새 세션을 연다(시연용 빠른 초기화). */
   clearSessions: () => void
   addMessage: (message: Omit<Message, 'clientId'> & { clientId?: string }) => void
@@ -53,9 +61,11 @@ interface SessionState {
 }
 
 /**
- * 읽기 전용(과거 세션 조회)은 store 플래그가 아니라 라우트(`/chat/:sessionId`)로 판정한다.
- * 이 store 는 라이브 세션만 소유하며, `sessions`(사이드바 목록)만 localStorage 에 영속화한다.
- * `currentSessionId`·`history` 는 라이브 전용이라 persist 하지 않는다(새로고침 시 새 세션).
+ * 모든 세션은 `/chat/:sessionId` 로 통일된다. 과거/현재 구분 없이, 진입 시 서버에서
+ * `GET /api/history` 로 받아 `loadSession` 으로 1회 적재한 뒤 그 위에서 이어쓰기한다(스토어가 주인).
+ * 이 store 는 "현재 화면의 세션" 하나를 소유하며, `sessions`(사이드바 목록)·`favoriteSessionIds`
+ * 만 localStorage 에 영속화한다. `currentSessionId`·`history` 는 persist 하지 않는다 —
+ * 새로고침 시엔 URL 의 sessionId 로 서버에서 다시 복원하므로 휘발이라도 손실이 없다.
  */
 export const useSessionStore = create<SessionState>()(
   persist(
@@ -67,13 +77,14 @@ export const useSessionStore = create<SessionState>()(
       favoriteSessionIds: [],
       pendingMessage: null,
 
-      startNewSession: () =>
-        set({
-          currentSessionId: generateUUID(),
-          history: [],
-          historyIds: {},
-          pendingMessage: null,
-        }),
+      startNewSession: () => {
+        const id = generateUUID()
+        set({ currentSessionId: id, history: [], historyIds: {}, pendingMessage: null })
+        return id
+      },
+
+      loadSession: (sessionId, history, historyIds) =>
+        set({ currentSessionId: sessionId, history, historyIds }),
 
       // 새 세션 + 영속 데이터(sessions·favoriteSessionIds)까지 비운다. persist 가 localStorage 도 동기화.
       clearSessions: () =>
