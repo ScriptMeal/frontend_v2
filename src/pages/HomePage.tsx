@@ -17,9 +17,10 @@ export default function HomePage() {
   const handleSubmit = (message: string) => {
     // 매 홈 제출마다 새 세션(새 uuid·빈 history)을 발급해 이전 대화 잔여물이 섞이지 않게 한다.
     // startNewSession 이 pendingMessage 를 비우므로 반드시 그 뒤에 적재한다.
-    startNewSession()
+    // 발급된 id 로 `/chat/:id` 에 진입하면 ChatPage 가 그 세션을 하이드레이션하고 대기 메시지를 전송한다.
+    const sessionId = startNewSession()
     setPendingMessage(message)
-    navigate('/chat')
+    navigate(`/chat/${sessionId}`)
   }
 
   return (

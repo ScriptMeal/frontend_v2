@@ -25,8 +25,6 @@ interface Props {
   activeTool?: string | null
   error?: string | null
   onSend?: (message: string) => void
-  /** 과거 세션 조회 모드 — 입력창 대신 읽기 전용 안내를 보여준다 */
-  readOnly?: boolean
   /**
    * 메시지 index → history_id 매핑. assistant 버블의 즐겨찾기 저장에 쓴다.
    * history_id 가 없는 버블은 즐겨찾기 버튼을 노출하지 않는다(POST 누락 차단).
@@ -60,7 +58,6 @@ export default function ChatView({
   activeTool = null,
   error = null,
   onSend,
-  readOnly = false,
   historyIds,
   favoritedMap,
   onSaveFavorite,
@@ -100,9 +97,7 @@ export default function ChatView({
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
           {isEmptyChat && (
             <StateMessage variant="empty">
-              {readOnly
-                ? '저장된 대화가 없습니다.'
-                : '메시지를 입력해 레시피 대화를 시작해 보세요.'}
+              메시지를 입력해 레시피 대화를 시작해 보세요.
             </StateMessage>
           )}
 
@@ -191,13 +186,7 @@ export default function ChatView({
 
       <div className="border-t border-hairline bg-background">
         <div className="mx-auto w-full max-w-2xl px-4 py-3">
-          {readOnly ? (
-            <p className="py-1.5 text-center text-xs text-muted-foreground">
-              읽기 전용 — 과거 대화입니다. 이어가려면 새 대화를 시작하세요.
-            </p>
-          ) : (
-            <ChatInput onSubmit={onSend ?? (() => {})} disabled={isStreaming} />
-          )}
+          <ChatInput onSubmit={onSend ?? (() => {})} disabled={isStreaming} />
         </div>
       </div>
     </div>

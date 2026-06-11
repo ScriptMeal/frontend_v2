@@ -30,7 +30,8 @@ function AnimatedAppRoutes() {
         <Routes location={location}>
           {/* /home = 채팅 입력 화면 (앱 진입점) */}
           <Route path="/home" element={<HomePage />} />
-          {/* /chat = 라이브 세션, /chat/:sessionId = 과거 세션 읽기 전용 열람 */}
+          {/* 모든 세션은 /chat/:sessionId 로 통일(진입 시 서버 로드 후 이어쓰기).
+              비정상 /chat(id 없음) 진입은 ChatPage 가 홈으로 리다이렉트한다. */}
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:sessionId" element={<ChatPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />

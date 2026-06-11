@@ -83,7 +83,7 @@ export const mockHistoryBySession: Record<string, HistoryRecord[]> = {
 /**
  * 로드 실패 UI 확인용 데모 세션 id. `mockHistoryBySession` 에 의도적으로 기록을 두지 않고,
  * DEV 의 `getHistory` 가 이 id 에 대해 결정적으로 throw 하도록 한다(api/user.ts).
- * 사이드바에서 이 세션을 누르면 ReadOnlyChat 의 에러 상태를 볼 수 있다.
+ * 사이드바에서 이 세션을 누르면 ChatPage 의 기록 로드 에러 상태를 볼 수 있다.
  */
 export const DEMO_ERROR_SESSION_ID = 'demo-error'
 
