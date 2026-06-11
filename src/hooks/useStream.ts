@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { streamChat as defaultStreamChat } from '@/api/chat'
 import { useSessionStore } from '@/store/sessionStore'
 import { saveHistory as defaultSaveHistory } from '@/api/user'
 import { toolToIntent } from '@/lib/intent'
-import type { Intent } from '@/types'
+import type { HistoryRecord, Intent } from '@/types'
 
 export interface UseStreamReturn {
   isStreaming: boolean
@@ -30,14 +31,13 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
   const [activeTool, setActiveTool] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const queryClient = useQueryClient()
   const { currentSessionId, history, addMessage, addSession, recordHistoryId } = useSessionStore()
 
   const send = useCallback(
     async (userMessage: string) => {
       // API history 는 "이전 턴"만 — 현재 메시지를 추가하기 전 스냅샷을 캡처
       const historySnapshot = history
-      // 첫 턴이면(이전 기록 없음) 저장 성공 후 사이드바 세션 목록에 등록
-      const isFirstTurn = historySnapshot.length === 0
       // 이번 턴 assistant 버블의 index: 스냅샷 뒤로 user(+1)·assistant 순서로 추가되므로 +1.
       // 동시 전송이 끼어들어도 append-only라 기존 index 가 밀리지 않아 이 값은 불변이다.
       const assistantIndex = historySnapshot.length + 1
@@ -84,14 +84,22 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
             })
             // history_id 기록은 반드시 여기(await 이후)서만 — isStreaming 은 이미 false 라
             // 임시 버블 조건이 꺼져 있어 슬라이스 갱신 리렌더가 이중 버블을 만들지 않는다.
-            if (saved) recordHistoryId(assistantIndex, saved.id)
-            if (isFirstTurn) {
-              addSession({
-                id: currentSessionId,
-                createdAt: new Date().toISOString(),
-                preview: userMessage,
-              })
+            if (saved) {
+              recordHistoryId(assistantIndex, saved.id)
+              // 저장분을 history 캐시에 prepend(최신순) — 세션을 떠났다 돌아오거나 새로고침해
+              // 재하이드레이션할 때 방금 친 턴이 빠지지 않도록 사본을 최신으로 유지한다(A안 보강책 ②).
+              queryClient.setQueryData<HistoryRecord[]>(['history', currentSessionId], (old) => [
+                saved,
+                ...(old ?? []),
+              ])
             }
+            // 매 턴 세션을 upsert — 첫 턴이면 등록, 이어쓰기면 사이드바 최상단으로 이동 +
+            // preview 를 최신 user 메시지로 갱신한다(최근 활동 순). addSession 이 id 중복을 막는다.
+            addSession({
+              id: currentSessionId,
+              createdAt: new Date().toISOString(),
+              preview: userMessage,
+            })
           }
         }
       } catch (err) {
@@ -102,7 +110,16 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
         setActiveTool(null)
       }
     },
-    [currentSessionId, history, addMessage, addSession, recordHistoryId, streamChat, saveHistory],
+    [
+      currentSessionId,
+      history,
+      addMessage,
+      addSession,
+      recordHistoryId,
+      streamChat,
+      saveHistory,
+      queryClient,
+    ],
   )
 
   return { isStreaming, streamingText, activeTool, error, send }

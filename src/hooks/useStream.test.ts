@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createElement, type ReactNode } from 'react'
 import type { StreamEvent } from '@/types'
 
 const mocks = vi.hoisted(() => ({
@@ -18,6 +20,17 @@ function makeStream(events: StreamEvent[]) {
   return (async function* () {
     for (const event of events) yield event
   })()
+}
+
+/**
+ * useStream 은 저장 후 history 캐시를 갱신하므로 QueryClientProvider 가 필요하다.
+ * 새 QueryClient 로 격리 렌더하고, 캐시 검증을 위해 client 도 함께 반환한다.
+ */
+function renderStream(deps?: Parameters<typeof useStream>[0]) {
+  const queryClient = new QueryClient()
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children)
+  return { queryClient, ...renderHook(() => useStream(deps), { wrapper }) }
 }
 
 function makeHistoryRecord(over: Partial<HistoryRecord> = {}): HistoryRecord {
@@ -57,7 +70,7 @@ describe('useStream', () => {
       ]),
     )
 
-    const { result } = renderHook(() => useStream())
+    const { result } = renderStream()
     await act(async () => {
       await result.current.send('떡볶이')
     })
@@ -95,7 +108,7 @@ describe('useStream', () => {
       ]),
     )
 
-    const { result } = renderHook(() => useStream())
+    const { result } = renderStream()
     await act(async () => {
       await result.current.send('떡볶이 먹고 싶어')
     })
@@ -105,26 +118,52 @@ describe('useStream', () => {
     expect(sessions[0]).toMatchObject({ id: 's1', preview: '떡볶이 먹고 싶어' })
   })
 
-  it('이전 턴이 있으면(첫 턴이 아니면) 세션을 다시 등록하지 않는다 (edge)', async () => {
+  it('이어쓰기(둘째 턴 이상)엔 세션을 최상단으로 올리고 preview 를 최신 메시지로 갱신한다 (edge)', async () => {
     useSessionStore.setState({
       history: [
         { role: 'user', content: '이전', clientId: 'prev-u' },
         { role: 'assistant', content: '이전답', clientId: 'prev-a' },
       ],
-      sessions: [{ id: 's1', createdAt: '2026-06-01T00:00:00Z', preview: '이전' }],
+      sessions: [
+        { id: 's2', createdAt: '2026-06-02T00:00:00Z', preview: '다른 세션' },
+        { id: 's1', createdAt: '2026-06-01T00:00:00Z', preview: '이전' },
+      ],
     })
     mocks.streamChat.mockReturnValue(
       makeStream([{ type: 'chunk', value: '본문' }, { type: 'done', value: '' }]),
     )
 
-    const { result } = renderHook(() => useStream())
+    const { result } = renderStream()
     await act(async () => {
       await result.current.send('둘째 질문')
     })
 
     const { sessions } = useSessionStore.getState()
-    expect(sessions).toHaveLength(1)
-    expect(sessions[0].preview).toBe('이전')
+    // 중복 없이 's1' 을 맨 위로 이동(최근 활동 순) + preview 를 최신 user 메시지로 갱신
+    expect(sessions).toHaveLength(2)
+    expect(sessions[0]).toMatchObject({ id: 's1', preview: '둘째 질문' })
+    expect(sessions[1].id).toBe('s2')
+  })
+
+  it('저장 성공 후 history 캐시에 새 레코드를 prepend 한다 (재방문 정합, happy)', async () => {
+    mocks.saveHistory.mockResolvedValue(makeHistoryRecord({ id: 55, session_id: 's1' }))
+    mocks.streamChat.mockReturnValue(
+      makeStream([{ type: 'chunk', value: '본문' }, { type: 'done', value: '' }]),
+    )
+
+    const { result, queryClient } = renderStream()
+    // 같은 세션을 이미 한 번 방문해 캐시에 기존 1건이 있다고 가정
+    queryClient.setQueryData(['history', 's1'], [makeHistoryRecord({ id: 1 })])
+
+    await act(async () => {
+      await result.current.send('질문')
+    })
+
+    const cache = queryClient.getQueryData<HistoryRecord[]>(['history', 's1'])
+    expect(cache).toHaveLength(2)
+    // 최신순(newest-first) — 방금 저장분이 맨 앞
+    expect(cache?.[0].id).toBe(55)
+    expect(cache?.[1].id).toBe(1)
   })
 
   it('done.value 가 빈 문자열이면 본문만 저장한다 (edge)', async () => {
@@ -135,7 +174,7 @@ describe('useStream', () => {
       ]),
     )
 
-    const { result } = renderHook(() => useStream())
+    const { result } = renderStream()
     await act(async () => {
       await result.current.send('질문')
     })
@@ -163,7 +202,7 @@ describe('useStream', () => {
       makeStream([{ type: 'chunk', value: '본문' }, { type: 'done', value: '' }]),
     )
 
-    const { result } = renderHook(() => useStream())
+    const { result } = renderStream()
     await act(async () => {
       await result.current.send('새 질문')
     })
@@ -186,7 +225,7 @@ describe('useStream', () => {
       makeStream([{ type: 'chunk', value: '본문' }, { type: 'done', value: '' }]),
     )
 
-    const { result } = renderHook(() => useStream())
+    const { result } = renderStream()
     await act(async () => {
       await result.current.send('질문')
     })
@@ -203,7 +242,7 @@ describe('useStream', () => {
       throw new Error('네트워크 오류')
     })
 
-    const { result } = renderHook(() => useStream())
+    const { result } = renderStream()
     await act(async () => {
       await result.current.send('x')
     })
@@ -221,9 +260,7 @@ describe('useStream', () => {
       .mockReturnValue(makeStream([{ type: 'chunk', value: '주입됨' }, { type: 'done', value: '' }]))
     const injectedSave = vi.fn().mockResolvedValue(makeHistoryRecord())
 
-    const { result } = renderHook(() =>
-      useStream({ streamChat: injectedStream, saveHistory: injectedSave }),
-    )
+    const { result } = renderStream({ streamChat: injectedStream, saveHistory: injectedSave })
     await act(async () => {
       await result.current.send('안녕')
     })

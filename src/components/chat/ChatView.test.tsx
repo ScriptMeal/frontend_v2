@@ -14,15 +14,15 @@ const history: Message[] = [
   msg({ role: 'assistant', content: '## 떡볶이' }),
 ]
 
-describe('ChatView — readOnly', () => {
-  it('readOnly 면 입력창 대신 읽기 전용 안내를 보여준다 (happy)', () => {
-    render(<ChatView history={history} readOnly />)
-    expect(screen.queryByLabelText('메시지 입력')).not.toBeInTheDocument()
-    expect(screen.getByText(/읽기 전용/)).toBeInTheDocument()
+describe('ChatView — 입력창 상시 노출 (이어쓰기 통일)', () => {
+  it('과거 대화(history 가 있어도) 항상 입력창을 렌더한다 — 읽기 전용 분기 폐지 (happy)', () => {
+    render(<ChatView history={history} onSend={() => {}} />)
+    expect(screen.getByLabelText('메시지 입력')).toBeInTheDocument()
+    expect(screen.queryByText(/읽기 전용/)).not.toBeInTheDocument()
   })
 
-  it('readOnly 가 아니면 입력창을 렌더한다 (edge)', () => {
-    render(<ChatView history={history} onSend={() => {}} />)
+  it('빈 세션에서도 입력창을 렌더한다 (edge)', () => {
+    render(<ChatView history={[]} onSend={() => {}} />)
     expect(screen.getByLabelText('메시지 입력')).toBeInTheDocument()
   })
 })
@@ -87,7 +87,7 @@ describe('ChatView — 즐겨찾기 노출 조건 (intent 게이팅)', () => {
         history={turn('SPECIFIC_FOOD')}
         historyIds={{ 1: 55 }}
         favoritedMap={new Map([[55, { history_id: 55, favorite_id: 99 }]])}
-        readOnly
+        onSend={() => {}}
         onSaveFavorite={async () => 1}
         onDeleteFavorite={() => {}}
       />,
@@ -189,11 +189,6 @@ describe('ChatView — 빈 상태', () => {
   it('history 가 비고 스트리밍/에러가 없으면 시작 안내를 보여준다 (happy)', () => {
     render(<ChatView history={[]} onSend={() => {}} />)
     expect(screen.getByText(/레시피 대화를 시작/)).toBeInTheDocument()
-  })
-
-  it('readOnly 빈 세션은 저장된 대화 없음 안내를 보여준다 (edge)', () => {
-    render(<ChatView history={[]} readOnly />)
-    expect(screen.getByText(/저장된 대화가 없습니다/)).toBeInTheDocument()
   })
 
   it('스트리밍 중이면 빈 안내를 보여주지 않는다 (edge)', () => {
