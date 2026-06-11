@@ -57,6 +57,15 @@ function setStream(partial: Partial<typeof mocks.state>) {
   Object.assign(mocks.state, partial)
 }
 
+/**
+ * 라이브 채팅 진입 자격(홈에서 메시지를 들고 옴)을 부여한다.
+ * 빈 문자열은 mount 게이트(`pendingMessage !== null`)는 통과시키되 자동 전송(`if (captured)`)은
+ * 트리거하지 않아, 스트리밍 상태 검증을 send 호출 노이즈 없이 할 수 있다.
+ */
+function enterFromHome() {
+  useSessionStore.setState({ pendingMessage: '' })
+}
+
 /** 라우트 컨텍스트와 함께 렌더 — `/chat`(라이브) / `/chat/:sessionId`(읽기 전용) 분기 검증용 */
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -64,6 +73,7 @@ function renderAt(path: string) {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
+          <Route path="/home" element={<div>홈 화면</div>} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:sessionId" element={<ChatPage />} />
         </Routes>
@@ -94,12 +104,22 @@ describe('ChatPage — 라이브 (/chat)', () => {
     expect(useSessionStore.getState().pendingMessage).toBeNull()
   })
 
-  it('pendingMessage 가 없으면 진입 시 자동 전송하지 않는다 (edge)', () => {
+  it('홈을 거치지 않고(대기 메시지 없이) 진입하면 홈으로 리다이렉트한다 (edge)', () => {
+    // 뒤로가기·새로고침·직접 URL 진입은 이전 대화를 노출하지 않고 홈으로 보낸다.
+    useSessionStore.setState({
+      history: [
+        { role: 'user', content: '이전대화', clientId: 'u1' },
+        { role: 'assistant', content: '## 이전응답', clientId: 'a1' },
+      ],
+    })
     renderAt('/chat')
+    expect(screen.getByText('홈 화면')).toBeInTheDocument()
+    expect(screen.queryByText('이전대화')).not.toBeInTheDocument()
     expect(mocks.send).not.toHaveBeenCalled()
   })
 
   it('history 를 채팅 버블 리스트로 렌더한다', () => {
+    enterFromHome()
     useSessionStore.setState({
       history: [
         { role: 'user', content: '안녕', clientId: 'u1' },
@@ -112,18 +132,21 @@ describe('ChatPage — 라이브 (/chat)', () => {
   })
 
   it('send 직후(텍스트·툴 없음)엔 기본 로딩 인디케이터를 표시한다 (happy)', () => {
+    enterFromHome()
     setStream({ isStreaming: true, streamingText: '', activeTool: null })
     renderAt('/chat')
     expect(screen.getByText(/응답 생성 중/)).toBeInTheDocument()
   })
 
   it('툴 단계(텍스트 전, 툴 있음)엔 툴 문구를 표시한다', () => {
+    enterFromHome()
     setStream({ isStreaming: true, streamingText: '', activeTool: 'get_diet_products' })
     renderAt('/chat')
     expect(screen.getByText(/관련 다이어트 제품 검색 중/)).toBeInTheDocument()
   })
 
   it('텍스트가 도착하면 스트리밍 버블을 보이고 인디케이터는 숨긴다 (edge)', () => {
+    enterFromHome()
     setStream({ isStreaming: true, streamingText: '## 떡', activeTool: null })
     renderAt('/chat')
     expect(screen.getByRole('heading', { name: '떡' })).toBeInTheDocument()
@@ -132,6 +155,7 @@ describe('ChatPage — 라이브 (/chat)', () => {
   })
 
   it('하단 입력창 전송 시 send 를 호출한다', async () => {
+    enterFromHome()
     const user = userEvent.setup()
     renderAt('/chat')
     await user.type(screen.getByLabelText('메시지 입력'), '두부 요리')
@@ -140,6 +164,7 @@ describe('ChatPage — 라이브 (/chat)', () => {
   })
 
   it('스트리밍 중에는 입력창을 비활성화한다', () => {
+    enterFromHome()
     setStream({ isStreaming: true })
     renderAt('/chat')
     expect(screen.getByLabelText('메시지 입력')).toBeDisabled()
