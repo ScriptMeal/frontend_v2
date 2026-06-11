@@ -1,13 +1,62 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import ChatBubble from '@/components/chat/ChatBubble'
 import ChatInput from '@/components/chat/ChatInput'
 import ChatPairGroup from '@/components/chat/ChatPairGroup'
+import ChatPairContextMenu from '@/components/chat/ChatPairContextMenu'
 import DeleteHistoryControl from '@/components/chat/DeleteHistoryControl'
 import ToolIndicator from '@/components/chat/ToolIndicator'
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
 import { isFavoritableIntent } from '@/lib/intent'
+import { useCoarsePointer } from '@/hooks/useCoarsePointer'
+import { useLongPress } from '@/hooks/useLongPress'
 import type { Intent, Message } from '@/types'
+
+/**
+ * 터치에서 자식(대화 쌍)을 길게 누르면 rect 를 측정해 onTrigger 로 넘기는 래퍼.
+ * useLongPress 가 훅이라 목록 map 안에서 직접 호출할 수 없어, 쌍마다 이 컴포넌트로 감싼다.
+ */
+function PairLongPress({
+  enabled,
+  onTrigger,
+  children,
+}: {
+  enabled: boolean
+  onTrigger: (rect: DOMRect) => void
+  children: React.ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const handlers = useLongPress(() => {
+    if (ref.current) onTrigger(ref.current.getBoundingClientRect())
+  }, { enabled })
+  return (
+    <div ref={ref} className={enabled ? 'select-none [-webkit-touch-callout:none]' : undefined} {...handlers}>
+      {children}
+    </div>
+  )
+}
+
+/** 롱프레스로 연 컨텍스트 메뉴 대상 — 누른 쌍의 좌표와 페이로드. */
+interface ActiveMenu {
+  rect: DOMRect
+  userContent: string
+  assistantContent: string
+  intent: Intent
+  historyId: number
+  canFavorite: boolean
+}
+
+/** favoritedMap(서버 스냅샷)을 모바일 즐겨찾기 상태(historyId → favorite_id)로 평탄화한다. */
+function seedSaved(
+  favoritedMap?: Map<number, { history_id: number; favorite_id: number }>,
+): Record<number, number | null> {
+  const seed: Record<number, number | null> = {}
+  favoritedMap?.forEach((v, hid) => {
+    seed[hid] = v.favorite_id
+  })
+  return seed
+}
 
 /** 즐겨찾기할 대화 턴(질문 + 답변 + 의도 + 원본 히스토리 id) */
 export interface FavoriteTurn {
@@ -69,6 +118,34 @@ export default function ChatView({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [history.length, streamingText, activeTool])
 
+  // 모바일(터치)에선 하단 버튼을 숨기고 롱프레스 컨텍스트 메뉴로 즐겨찾기·삭제를 처리한다.
+  const coarse = useCoarsePointer()
+  const [activeMenu, setActiveMenu] = useState<ActiveMenu | null>(null)
+
+  // 모바일 즐겨찾기 상태(historyId → favorite_id). 컨텍스트 메뉴와 말풍선 별 표시의 단일 소스.
+  // 서버 스냅샷(favoritedMap)으로 시드하고, 메뉴 액션으로 갱신한다(데스크톱 footer 경로와 분리).
+  const [mobileSaved, setMobileSaved] = useState<Record<number, number | null>>(() =>
+    seedSaved(favoritedMap),
+  )
+  // favoritedMap 이 바뀌면(세션 전환·즐겨찾기 재조회) 렌더 중 재시드한다.
+  // effect 대신 렌더-시점 조정 패턴(prev 를 state 로 추적) — 메뉴 토글로 쌓인 로컬 변경을 새 스냅샷으로 리셋.
+  const [seededFrom, setSeededFrom] = useState(favoritedMap)
+  if (seededFrom !== favoritedMap) {
+    setSeededFrom(favoritedMap)
+    setMobileSaved(seedSaved(favoritedMap))
+  }
+
+  const toggleMobileFavorite = async (historyId: number, turn: FavoriteTurn) => {
+    const current = mobileSaved[historyId] ?? null
+    if (current === null) {
+      const id = await onSaveFavorite!(turn)
+      setMobileSaved((m) => ({ ...m, [historyId]: id }))
+    } else {
+      await onDeleteFavorite?.(current)
+      setMobileSaved((m) => ({ ...m, [historyId]: null }))
+    }
+  }
+
   const isEmptyChat = history.length === 0 && !isStreaming && !error
 
   // history 를 실제 role 기준으로 묶는다. user→assistant 가 이어질 때만 한 쌍으로 묶고,
@@ -117,15 +194,54 @@ export default function ChatView({
             const userMsg = history[group.userIdx]
             const assistantMsg = history[group.assistantIdx]
 
-            // 쌍 삭제: historyIds 에서 assistant 인덱스의 history_id 를 찾아 바인딩.
-            // 삭제 컨트롤은 assistant 푸터에서 즐겨찾기 버튼과 나란히 노출한다.
+            // 쌍 삭제·즐겨찾기 가능 여부는 historyIds 에서 assistant 인덱스의 history_id 확정 시에만.
             const historyId = historyIds?.[group.assistantIdx]
+            const canFavorite =
+              onSaveFavorite != null &&
+              isFavoritableIntent(assistantMsg.intent) &&
+              historyId != null
+            const canDelete = onDeleteHistory != null && historyId != null
+
+            // 안정적인 React key: 메시지 생성 시 고정된 clientId 를 사용한다.
+            // history_id 는 saveHistory 이후에 도착하므로 key 에 쓰면 remount 가 발생한다.
+            // (.claude/debugging/20260610-streaming-confirm-bubble-remount.md 참고)
+            const pairKey = `pair-${userMsg.clientId}`
+
+            // 모바일(터치): 하단 버튼을 숨기고 길게 누르면 컨텍스트 메뉴. 저장 표시는 mobileSaved.
+            if (coarse) {
+              const saved = historyId != null && mobileSaved[historyId] != null
+              return (
+                <PairLongPress
+                  key={pairKey}
+                  enabled={historyId != null && (canFavorite || canDelete)}
+                  onTrigger={(rect) => {
+                    if (historyId == null) return
+                    setActiveMenu({
+                      rect,
+                      userContent: userMsg.content,
+                      assistantContent: assistantMsg.content,
+                      intent: assistantMsg.intent ?? 'OFF_TOPIC',
+                      historyId,
+                      canFavorite,
+                    })
+                  }}
+                >
+                  <ChatPairGroup
+                    userBubble={<ChatBubble role="user" content={userMsg.content} />}
+                    assistantBubble={
+                      <ChatBubble role="assistant" content={assistantMsg.content} saved={saved} />
+                    }
+                  />
+                </PairLongPress>
+              )
+            }
+
+            // 데스크톱: 기존 hover 푸터(즐겨찾기 버튼 + 삭제 컨트롤) 유지.
             const deleteControl =
               historyId != null && onDeleteHistory ? (
                 <DeleteHistoryControl onDeleteHistory={() => onDeleteHistory(historyId)} />
               ) : undefined
 
-            // 즐겨찾기 저장/해제: 레시피 응답(favoritable intent) + history_id 확정 시에만.
             const saveHandler =
               onSaveFavorite && isFavoritableIntent(assistantMsg.intent) && historyId != null
                 ? () =>
@@ -139,11 +255,6 @@ export default function ChatView({
 
             const initialFavoriteId =
               historyId != null ? favoritedMap?.get(historyId)?.favorite_id : undefined
-
-            // 안정적인 React key: 메시지 생성 시 고정된 clientId 를 사용한다.
-            // history_id 는 saveHistory 이후에 도착하므로 key 에 쓰면 remount 가 발생한다.
-            // (.claude/debugging/20260610-streaming-confirm-bubble-remount.md 참고)
-            const pairKey = `pair-${userMsg.clientId}`
 
             return (
               <ChatPairGroup
@@ -189,6 +300,30 @@ export default function ChatView({
           <ChatInput onSubmit={onSend ?? (() => {})} disabled={isStreaming} />
         </div>
       </div>
+
+      {/* 모바일 롱프레스 컨텍스트 메뉴 (즐겨찾기·삭제) */}
+      <AnimatePresence>
+        {activeMenu && (
+          <ChatPairContextMenu
+            rect={activeMenu.rect}
+            userContent={activeMenu.userContent}
+            assistantContent={activeMenu.assistantContent}
+            saved={mobileSaved[activeMenu.historyId] != null}
+            canFavorite={activeMenu.canFavorite}
+            canDelete={onDeleteHistory != null}
+            onToggleFavorite={() =>
+              toggleMobileFavorite(activeMenu.historyId, {
+                user_message: activeMenu.userContent,
+                recipe_reply: activeMenu.assistantContent,
+                intent: activeMenu.intent,
+                history_id: activeMenu.historyId,
+              })
+            }
+            onDelete={() => onDeleteHistory?.(activeMenu.historyId)}
+            onClose={() => setActiveMenu(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

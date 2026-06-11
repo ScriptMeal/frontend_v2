@@ -26,6 +26,11 @@ interface Props {
   onDeleteFavorite?: (id: number) => void | Promise<void>
   /** 즐겨찾기 버튼 옆(푸터)에 나란히 렌더할 추가 액션(예: 대화 삭제). assistant 버블 전용. */
   footerAction?: React.ReactNode
+  /**
+   * 모바일에서 하단 버튼을 숨긴 채 저장 여부만 알려야 할 때 사용하는 비-인터랙티브 표시.
+   * 토글 버튼(onSaveFavorite)이 있으면 그쪽이 저장 상태를 그리므로 인디케이터는 생략한다.
+   */
+  saved?: boolean
 }
 
 export default function ChatBubble({
@@ -36,6 +41,7 @@ export default function ChatBubble({
   onSaveFavorite,
   onDeleteFavorite,
   footerAction,
+  saved = false,
 }: Props) {
   // 저장되면 favorite id 를 보유한다(=별 채움). 해제하면 null 로 되돌린다.
   const [favoriteId, setFavoriteId] = useState<number | null>(initialFavoriteId ?? null)
@@ -106,6 +112,17 @@ export default function ChatBubble({
             </button>
           )}
           {footerAction}
+        </div>
+      )}
+
+      {/* 모바일 저장 표시 — 푸터(토글 버튼)가 없을 때만. 누르는 동작은 컨텍스트 메뉴가 담당. */}
+      {saved && !onSaveFavorite && (
+        <div
+          data-testid="saved-indicator"
+          className="flex items-center gap-1 px-1 text-xs text-accent"
+        >
+          <Star className="size-3.5 fill-accent" />
+          저장됨
         </div>
       )}
     </motion.div>

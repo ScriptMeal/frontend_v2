@@ -1,4 +1,5 @@
 import type { Message, RecipeRecord } from '@/types'
+import { generateUUID } from '@/lib/utils'
 
 /**
  * `GET /api/history`·`GET /api/favorites` 레코드(user_message + recipe_reply 쌍)를
@@ -9,12 +10,12 @@ import type { Message, RecipeRecord } from '@/types'
  */
 export function recordToMessages(records: RecipeRecord[]): Message[] {
   return [...records].reverse().flatMap((record) => [
-    { role: 'user', content: record.user_message, clientId: crypto.randomUUID() } satisfies Message,
+    { role: 'user', content: record.user_message, clientId: generateUUID() } satisfies Message,
     {
       role: 'assistant',
       content: record.recipe_reply,
       intent: record.intent,
-      clientId: crypto.randomUUID(),
+      clientId: generateUUID(),
     } satisfies Message,
   ])
 }
