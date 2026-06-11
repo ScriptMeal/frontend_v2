@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import ChatView, { type FavoriteTurn } from '@/components/chat/ChatView'
+import ChatSkeleton from '@/components/chat/ChatSkeleton'
 import StateMessage from '@/components/common/StateMessage'
 import { useStream } from '@/hooks/useStream'
 import { useHistory, useDeleteHistory } from '@/hooks/useHistory'
@@ -117,12 +118,12 @@ function ChatSession({ sessionId }: { sessionId: string }) {
     )
   }
 
-  // 하이드레이션·즐겨찾기 로드가 끝나기 전엔 로딩 — 과거 기록이 뒤늦게 끼어드는 레이아웃 점프와,
-  // initialFavoriteId 가 첫 mount 에 누락되는 것을 막는다.
+  // 하이드레이션·즐겨찾기 로드가 끝나기 전엔 스켈레톤(DESIGN.md 표준) — 과거 기록이 뒤늦게
+  // 끼어드는 레이아웃 점프와, initialFavoriteId 가 첫 mount 에 누락되는 것을 막는다.
   if (!hydrated || favorites.isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <StateMessage variant="loading">대화 기록을 불러오는 중…</StateMessage>
+      <div className="h-full overflow-y-auto">
+        <ChatSkeleton />
       </div>
     )
   }

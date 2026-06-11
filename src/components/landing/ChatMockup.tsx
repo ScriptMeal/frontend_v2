@@ -27,12 +27,8 @@ export default function ChatMockup() {
 
   const clear = () => timers.current.forEach(clearTimeout)
 
-  const run = useCallback(() => {
-    clear()
-    setPhase('idle')
-    setStreamed('')
-    setFavorited(false)
-
+  // 페이즈 전환 타이머만 예약한다(동기 setState 없음).
+  const schedule = useCallback(() => {
     const t = (fn: () => void, ms: number) => {
       const id = setTimeout(fn, ms)
       timers.current.push(id)
@@ -43,11 +39,20 @@ export default function ChatMockup() {
     t(() => setPhase('streaming'), 2800)
   }, [])
 
-  // 최초 실행
+  // 루프 재시작용 — 상태를 초기로 되돌린 뒤 다시 예약한다.
+  const run = useCallback(() => {
+    clear()
+    setPhase('idle')
+    setStreamed('')
+    setFavorited(false)
+    schedule()
+  }, [schedule])
+
+  // 최초 실행 — 마운트 시점엔 상태가 이미 초기값이므로 예약만 한다(effect 내 동기 setState 회피).
   useEffect(() => {
-    run()
+    schedule()
     return clear
-  }, [run])
+  }, [schedule])
 
   // 스트리밍
   useEffect(() => {

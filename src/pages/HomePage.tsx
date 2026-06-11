@@ -12,7 +12,8 @@ export default function HomePage() {
   const startNewSession = useSessionStore((s) => s.startNewSession)
   const setPendingMessage = useSessionStore((s) => s.setPendingMessage)
   // 마운트당 1회만 추첨해 고정 — 매 렌더 재추첨 방지(결정 20260604-home-suggested-questions)
-  const [suggestions] = useState(() => pickSuggestions(suggestedQuestions, 3))
+  // 기본 비율 specific 2 : general 1 로 추첨한다(pickSuggestions 기본값).
+  const [suggestions] = useState(() => pickSuggestions(suggestedQuestions))
 
   const handleSubmit = (message: string) => {
     // 매 홈 제출마다 새 세션(새 uuid·빈 history)을 발급해 이전 대화 잔여물이 섞이지 않게 한다.
