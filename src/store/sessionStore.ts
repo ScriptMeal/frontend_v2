@@ -101,7 +101,7 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({
           history: [
             ...state.history,
-            { ...message, clientId: message.clientId ?? crypto.randomUUID() },
+            { ...message, clientId: message.clientId ?? generateUUID() },
           ],
         })),
 

@@ -11,7 +11,7 @@ const RECIPE = `다이어트 떡볶이 레시피입니다.
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-[300px] overflow-hidden rounded-[20px] border border-hairline bg-background shadow-float">
+    <div className="w-[300px] max-w-full overflow-hidden rounded-[20px] border border-hairline bg-background shadow-float">
       <div className="flex h-10 shrink-0 items-center bg-foreground px-4">
         <span className="text-xs font-semibold tracking-tight text-white">LARA</span>
       </div>
