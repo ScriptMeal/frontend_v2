@@ -9,6 +9,7 @@ import ToolIndicator from '@/components/chat/ToolIndicator'
 import StateMessage from '@/components/common/StateMessage'
 import AuraBackground from '@/components/common/AuraBackground'
 import { isFavoritableIntent } from '@/lib/intent'
+import { waitForHistoryId } from '@/lib/waitForHistoryId'
 import { useCoarsePointer } from '@/hooks/useCoarsePointer'
 import { useLongPress } from '@/hooks/useLongPress'
 import type { Intent, Message } from '@/types'
@@ -194,13 +195,12 @@ export default function ChatView({
             const userMsg = history[group.userIdx]
             const assistantMsg = history[group.assistantIdx]
 
-            // 쌍 삭제·즐겨찾기 가능 여부는 historyIds 에서 assistant 인덱스의 history_id 확정 시에만.
             const historyId = historyIds?.[group.assistantIdx]
+            // 버튼은 어시스턴트 버블이 확정되는 즉시 노출한다(낙관적 렌더).
+            // historyId 가 아직 없어도 버튼을 보이고, 클릭 시 waitForHistoryId 가 확정까지 대기한다.
             const canFavorite =
-              onSaveFavorite != null &&
-              isFavoritableIntent(assistantMsg.intent) &&
-              historyId != null
-            const canDelete = onDeleteHistory != null && historyId != null
+              onSaveFavorite != null && isFavoritableIntent(assistantMsg.intent)
+            const canDelete = onDeleteHistory != null
 
             // 안정적인 React key: 메시지 생성 시 고정된 clientId 를 사용한다.
             // history_id 는 saveHistory 이후에 도착하므로 key 에 쓰면 remount 가 발생한다.
@@ -213,7 +213,7 @@ export default function ChatView({
               return (
                 <PairLongPress
                   key={pairKey}
-                  enabled={historyId != null && (canFavorite || canDelete)}
+                  enabled={canFavorite || canDelete}
                   onTrigger={(rect) => {
                     if (historyId == null) return
                     setActiveMenu({
@@ -237,20 +237,28 @@ export default function ChatView({
             }
 
             // 데스크톱: 기존 hover 푸터(즐겨찾기 버튼 + 삭제 컨트롤) 유지.
-            const deleteControl =
-              historyId != null && onDeleteHistory ? (
-                <DeleteHistoryControl onDeleteHistory={() => onDeleteHistory(historyId)} />
-              ) : undefined
+            // historyId 가 없으면(saveHistory 완료 전) waitForHistoryId 가 대기 후 API 호출.
+            const deleteControl = onDeleteHistory ? (
+              <DeleteHistoryControl
+                onDeleteHistory={async () => {
+                  const hId = historyId ?? (await waitForHistoryId(group.assistantIdx))
+                  if (hId != null) void onDeleteHistory(hId)
+                }}
+              />
+            ) : undefined
 
             const saveHandler =
-              onSaveFavorite && isFavoritableIntent(assistantMsg.intent) && historyId != null
-                ? () =>
-                    onSaveFavorite({
+              onSaveFavorite && isFavoritableIntent(assistantMsg.intent)
+                ? async () => {
+                    const hId = historyId ?? (await waitForHistoryId(group.assistantIdx))
+                    if (hId == null) throw new Error('historyId unavailable')
+                    return onSaveFavorite({
                       user_message: userMsg.content,
                       recipe_reply: assistantMsg.content,
                       intent: assistantMsg.intent ?? 'OFF_TOPIC',
-                      history_id: historyId,
+                      history_id: hId,
                     })
+                  }
                 : undefined
 
             const initialFavoriteId =
