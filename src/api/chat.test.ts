@@ -10,7 +10,7 @@ function sseResponse(payload: string): Response {
       controller.close()
     },
   })
-  return { body: stream } as unknown as Response
+  return { ok: true, status: 200, body: stream } as unknown as Response
 }
 
 async function collect(req: Parameters<typeof streamChat>[0]): Promise<StreamEvent[]> {
@@ -66,8 +66,33 @@ describe('streamChat', () => {
     expect(events).toEqual([{ type: 'chunk', value: 'ok' }])
   })
 
+  it('마지막 이벤트가 trailing 개행 없이 끝나도 flush 한다 (edge)', async () => {
+    // done 이벤트가 \n 없이 종료 — 루프 종료 후 남은 버퍼를 파싱해야 유실되지 않는다.
+    vi.mocked(fetch).mockResolvedValue(
+      sseResponse(
+        'data: {"type":"chunk","value":"## 떡볶이"}\n' +
+          'data: {"type":"done","value":"구매정보"}',
+      ),
+    )
+
+    const events = await collect({ message: 'x', history: [] })
+    expect(events).toEqual([
+      { type: 'chunk', value: '## 떡볶이' },
+      { type: 'done', value: '구매정보' },
+    ])
+  })
+
   it('응답 본문이 없으면 예외를 던진다 (error)', async () => {
-    vi.mocked(fetch).mockResolvedValue({ body: null } as unknown as Response)
+    vi.mocked(fetch).mockResolvedValue({ ok: true, status: 200, body: null } as unknown as Response)
     await expect(collect({ message: 'x', history: [] })).rejects.toThrow()
+  })
+
+  it('HTTP 에러(4xx/5xx)면 본문이 있어도 예외를 던진다 (error)', async () => {
+    // 에러 응답도 본문(에러 HTML/JSON)은 존재하므로 body 가드만으론 통과한다.
+    const res = sseResponse('{"detail":"internal error"}')
+    vi.mocked(fetch).mockResolvedValue({ ...res, ok: false, status: 500 } as unknown as Response)
+    await expect(collect({ message: 'x', history: [] })).rejects.toThrow(
+      '답변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+    )
   })
 })
