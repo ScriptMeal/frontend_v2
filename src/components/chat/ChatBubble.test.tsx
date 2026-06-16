@@ -162,6 +162,22 @@ describe('ChatBubble — 즐겨찾기 토글', () => {
     expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeInTheDocument()
   })
 
+  it('저장 처리 중에는 스피너를 노출한다 (loading)', async () => {
+    const user = userEvent.setup()
+    const onSaveFavorite = vi.fn(() => new Promise<number>(() => {})) // 미해결 — pending 유지
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        onSaveFavorite={onSaveFavorite}
+        onDeleteFavorite={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기에 저장' }))
+    expect(await screen.findByTestId('favorite-spinner')).toBeInTheDocument()
+  })
+
   it('저장이 실패하면(예: 400 중복) 별을 채우지 않는다 (error)', async () => {
     const user = userEvent.setup()
     const onSaveFavorite = vi.fn().mockRejectedValue(new Error('400'))

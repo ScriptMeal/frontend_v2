@@ -55,6 +55,25 @@ describe('ChatPairContextMenu', () => {
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
 
+  it('즐겨찾기 처리 중에는 스피너를 노출한다 (loading)', async () => {
+    const user = userEvent.setup()
+    const onToggleFavorite = vi.fn(() => new Promise<void>(() => {})) // 미해결 — pending 유지
+    render(<ChatPairContextMenu {...baseProps} onToggleFavorite={onToggleFavorite} />)
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기' }))
+    expect(await screen.findByTestId('contextmenu-favorite-spinner')).toBeInTheDocument()
+  })
+
+  it('삭제 확인 처리 중에는 스피너를 노출한다 (loading)', async () => {
+    const user = userEvent.setup()
+    const onDelete = vi.fn(() => new Promise<void>(() => {})) // 미해결 — pending 유지
+    render(<ChatPairContextMenu {...baseProps} onDelete={onDelete} />)
+
+    await user.click(screen.getByRole('button', { name: '삭제하기' }))
+    await user.click(screen.getByRole('button', { name: '삭제 확인' }))
+    expect(await screen.findByTestId('contextmenu-delete-spinner')).toBeInTheDocument()
+  })
+
   it('백드롭 클릭 시 닫는다 (edge)', async () => {
     const onClose = vi.fn()
     const user = userEvent.setup()

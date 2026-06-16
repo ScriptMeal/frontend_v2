@@ -1,6 +1,7 @@
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { parseRecipeReply } from '@/lib/parseRecipeReply'
+import { nestOrderedSubBullets } from '@/lib/nestOrderedSubBullets'
 import WeatherHeader from '@/components/chat/WeatherHeader'
 import PurchaseInfo from '@/components/chat/PurchaseInfo'
 
@@ -43,13 +44,19 @@ interface Props {
 export default function RecipeContent({ content }: Props) {
   // 날씨 헤더(📅)·구매 정보(🛒)를 본문에서 분리 — 마커 없으면 body == content
   const { weather, body, purchase } = parseRecipeReply(content)
+  // 순서 항목 사이에 끼인 컬럼0 불릿을 항목 하위로 중첩해 OL 이 쪼개지지 않게 한다(1·2·3 자동 증가).
+  const normalizedBody = nestOrderedSubBullets(body)
 
   return (
     <div className="flex flex-col gap-2">
       {weather && <WeatherHeader weather={weather} />}
-      {body && (
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-          {body}
+      {normalizedBody && (
+        // singleTilde:false — 범위용 단일 물결표(~)를 취소선으로 오해석하지 않도록 한다.
+        <ReactMarkdown
+          remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
+          components={markdownComponents}
+        >
+          {normalizedBody}
         </ReactMarkdown>
       )}
       {purchase.length > 0 && <PurchaseInfo items={purchase} />}

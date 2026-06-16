@@ -147,6 +147,12 @@
     animation-duration: 1.5s !important;
     animation-iteration-count: infinite !important;
   }
+
+  /* 액션 스피너(삭제·즐겨찾기) — 진행 중을 알리는 필수 피드백이라 동작 최소화에서도 회전을 유지한다. */
+  .action-spinner {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 @theme inline {

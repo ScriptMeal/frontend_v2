@@ -42,7 +42,7 @@ export default function ChatInput({
         autoFocus={autoFocus}
         rows={1}
         aria-label="메시지 입력"
-        className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+        className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 sm:text-sm"
       />
       <Button size="icon" aria-label="전송" onClick={submit} disabled={!canSubmit}>
         <ArrowUp />

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Star } from 'lucide-react'
+import { Loader2, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import RecipeContent from '@/components/chat/RecipeContent'
 
@@ -102,12 +102,17 @@ export default function ChatBubble({
               disabled={pending}
               aria-label={isSaved ? '즐겨찾기 해제' : '즐겨찾기에 저장'}
               aria-pressed={isSaved}
+              aria-busy={pending}
               className={cn(
                 'flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-default disabled:opacity-60',
                 isSaved ? 'text-accent' : 'text-muted-foreground hover:text-accent',
               )}
             >
-              <Star className={cn('size-3.5', isSaved && 'fill-accent')} />
+              {pending ? (
+                <Loader2 data-testid="favorite-spinner" className="action-spinner size-3.5 animate-spin" />
+              ) : (
+                <Star className={cn('size-3.5', isSaved && 'fill-accent')} />
+              )}
               {isSaved ? '저장됨' : '즐겨찾기'}
             </button>
           )}
