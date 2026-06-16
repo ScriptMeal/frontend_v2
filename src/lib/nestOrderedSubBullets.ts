@@ -15,7 +15,7 @@
  * - 들여쓰기 폭은 순서 마커 너비(`1. `=3, `10. `=4)에 맞춘다.
  */
 export function nestOrderedSubBullets(markdown: string): string {
-  const orderedRe = /^(\d+\.[ \t]+)/
+  const orderedRe = /^(\d+[.)][ \t]+)/
   const bulletRe = /^[-*+][ \t]+/
   const fenceRe = /^(```|~~~)/
 

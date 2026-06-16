@@ -3,12 +3,20 @@ import { render } from '@testing-library/react'
 import RecipeContent from './RecipeContent'
 
 describe('RecipeContent — 마크다운 렌더 엣지케이스', () => {
-  it('순서 항목 사이에 불릿이 끼어도 하나의 순서 리스트로 렌더한다 (번호 1·2·3)', () => {
-    // 원본: 각 항목이 1. 이고 컬럼0 불릿이 끼어 OL 이 쪼개지던 케이스
+  it('순서 항목 사이에 불릿이 끼어도 하나의 순서 리스트로 렌더한다 (1. 마침표형)', () => {
     const content = '1. 로제업떡볶이\n- 떡 양은 줄이고\n\n1. 닭가슴살볼\n- 여름에 잘 맞는\n\n1. 두부면\n- 면은 두부'
     const { container } = render(<RecipeContent content={content} />)
 
-    // 쪼개진 3개 OL → 하나의 연속 OL 로 합쳐진다
+    expect(container.querySelectorAll('ol')).toHaveLength(1)
+    const ol = container.querySelector('ol')!
+    expect(ol.querySelectorAll(':scope > li')).toHaveLength(3)
+  })
+
+  it('순서 항목 사이에 불릿이 끼어도 하나의 순서 리스트로 렌더한다 (1) 괄호형 — LLM 실출력)', () => {
+    // LLM 실제 출력이 1) 형식임을 확인 후 추가
+    const content = '1) 오이냉국수\n- 시원하게 먹는 여름형 국수\n\n2) 새우살 레몬 샐러드볼\n- 상큼하게 먹는 샐러드\n\n3) 닭가슴살 볶음밥\n- 고단백 한 끼'
+    const { container } = render(<RecipeContent content={content} />)
+
     expect(container.querySelectorAll('ol')).toHaveLength(1)
     const ol = container.querySelector('ol')!
     expect(ol.querySelectorAll(':scope > li')).toHaveLength(3)

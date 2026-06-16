@@ -31,4 +31,9 @@ describe('nestOrderedSubBullets', () => {
     const input = '```\n1. A\n- x\n```'
     expect(nestOrderedSubBullets(input)).toBe(input)
   })
+
+  it('괄호형 번호(1) 2)) 바로 다음 컬럼0 불릿도 들여쓴다 (LLM 실출력 패턴)', () => {
+    const input = '1) A\n- x\n\n2) B\n- y'
+    expect(nestOrderedSubBullets(input)).toBe('1) A\n   - x\n\n2) B\n   - y')
+  })
 })
