@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
-import { Star, Trash2 } from 'lucide-react'
+import { Loader2, Star, Trash2 } from 'lucide-react'
 import ChatBubble from '@/components/chat/ChatBubble'
 import { cn } from '@/lib/utils'
 
@@ -146,7 +146,7 @@ export default function ChatPairContextMenu({
       >
         {confirming ? (
           <div className="flex flex-col">
-            <p className="px-4 pt-3 pb-2 text-xs text-muted-foreground">답변도 함께 삭제됩니다</p>
+            <p className="px-4 pt-3 pb-2 text-xs text-muted-foreground">질문과 답변이 함께 삭제됩니다</p>
             <button
               type="button"
               onClick={handleDeleteConfirm}
@@ -154,7 +154,14 @@ export default function ChatPairContextMenu({
               className="flex items-center justify-between gap-3 px-4 py-3 text-left font-medium text-destructive hover:bg-secondary disabled:opacity-60"
             >
               {pending ? '삭제 중…' : '삭제 확인'}
-              <Trash2 className="size-4" />
+              {pending ? (
+                <Loader2
+                  data-testid="contextmenu-delete-spinner"
+                  className="action-spinner size-4 animate-spin"
+                />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
             </button>
             <button
               type="button"
@@ -180,7 +187,14 @@ export default function ChatPairContextMenu({
                 )}
               >
                 {saved ? '즐겨찾기 해제' : '즐겨찾기'}
-                <Star className={cn('size-4', saved && 'fill-accent')} />
+                {pending ? (
+                  <Loader2
+                    data-testid="contextmenu-favorite-spinner"
+                    className="action-spinner size-4 animate-spin"
+                  />
+                ) : (
+                  <Star className={cn('size-4', saved && 'fill-accent')} />
+                )}
               </button>
             )}
             {canDelete && (
