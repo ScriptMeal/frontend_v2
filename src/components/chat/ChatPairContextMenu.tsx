@@ -201,8 +201,9 @@ export default function ChatPairContextMenu({
               <button
                 type="button"
                 onClick={() => setConfirming(true)}
+                disabled={pending}
                 aria-label="삭제하기"
-                className="flex items-center justify-between gap-3 px-4 py-3 text-left text-destructive hover:bg-secondary"
+                className="flex items-center justify-between gap-3 px-4 py-3 text-left text-destructive hover:bg-secondary disabled:opacity-60 disabled:hover:bg-transparent"
               >
                 삭제하기
                 <Trash2 className="size-4" />
