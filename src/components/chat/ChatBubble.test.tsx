@@ -197,3 +197,43 @@ describe('ChatBubble — 즐겨찾기 토글', () => {
     expect(screen.queryByRole('button', { name: '즐겨찾기 해제' })).not.toBeInTheDocument()
   })
 })
+
+describe('ChatBubble — 동시 요청 방어 (favoriteDisabled · onBusyChange)', () => {
+  it('favoriteDisabled 면 즐겨찾기 버튼을 비활성화하고 클릭해도 저장하지 않는다 (방어)', async () => {
+    const user = userEvent.setup()
+    const onSaveFavorite = vi.fn().mockResolvedValue(7)
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        onSaveFavorite={onSaveFavorite}
+        onDeleteFavorite={vi.fn()}
+        favoriteDisabled
+      />,
+    )
+    const button = screen.getByRole('button', { name: '즐겨찾기에 저장' })
+    expect(button).toBeDisabled()
+    await user.click(button)
+    expect(onSaveFavorite).not.toHaveBeenCalled()
+  })
+
+  it('토글 진행에 맞춰 onBusyChange(true→false) 를 보고한다 (방어)', async () => {
+    const user = userEvent.setup()
+    const onSaveFavorite = vi.fn().mockResolvedValue(7)
+    const onBusyChange = vi.fn()
+    render(
+      <ChatBubble
+        role="assistant"
+        content="## 떡볶이"
+        onSaveFavorite={onSaveFavorite}
+        onDeleteFavorite={vi.fn()}
+        onBusyChange={onBusyChange}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기에 저장' }))
+
+    expect(onBusyChange).toHaveBeenCalledWith(true)
+    expect(onBusyChange).toHaveBeenLastCalledWith(false)
+  })
+})

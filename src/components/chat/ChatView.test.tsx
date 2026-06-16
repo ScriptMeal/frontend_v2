@@ -185,6 +185,86 @@ describe('ChatView — 히스토리 삭제', () => {
   })
 })
 
+describe('ChatView — 같은 쌍 동시 요청 방어 (DELETE history ↔ POST favorite)', () => {
+  const turn = (intent: Message['intent']): Message[] => [
+    msg({ role: 'user', content: '떡볶이' }),
+    msg({ role: 'assistant', content: '## 떡볶이', intent }),
+  ]
+
+  it('삭제가 진행 중인 동안에는 같은 쌍의 즐겨찾기 버튼을 비활성화한다 (방어)', async () => {
+    const user = userEvent.setup()
+    let resolveDelete!: () => void
+    const onDeleteHistory = vi.fn(
+      () => new Promise<void>((resolve) => { resolveDelete = resolve }),
+    )
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+        onDeleteHistory={onDeleteHistory}
+      />,
+    )
+    await user.hover(screen.getByRole('group'))
+    await user.click(screen.getByRole('button', { name: '대화 삭제' }))
+    await user.click(screen.getByRole('button', { name: '삭제 확인' }))
+
+    // 삭제 요청이 아직 in-flight 인 동안 즐겨찾기 저장이 막혀야 한다(FK 충돌 방지).
+    expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeDisabled()
+    resolveDelete()
+  })
+
+  it('즐겨찾기 저장이 진행 중인 동안에는 같은 쌍의 삭제 버튼을 비활성화한다 (방어)', async () => {
+    const user = userEvent.setup()
+    let resolveSave!: (id: number) => void
+    const onSaveFavorite = vi.fn(
+      () => new Promise<number>((resolve) => { resolveSave = resolve }),
+    )
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={onSaveFavorite}
+        onDeleteHistory={() => {}}
+      />,
+    )
+    await user.hover(screen.getByRole('group'))
+    await user.click(screen.getByRole('button', { name: '즐겨찾기에 저장' }))
+
+    // 즐겨찾기 저장이 아직 in-flight 인 동안 삭제 진입이 막혀야 한다.
+    expect(screen.getByRole('button', { name: '대화 삭제' })).toBeDisabled()
+    resolveSave(1)
+  })
+
+  it('삭제가 끝나면(lock 해제) 즐겨찾기 버튼이 다시 활성화된다 (edge)', async () => {
+    const user = userEvent.setup()
+    let resolveDelete!: () => void
+    const onDeleteHistory = vi.fn(
+      () => new Promise<void>((resolve) => { resolveDelete = resolve }),
+    )
+    render(
+      <ChatView
+        history={turn('SPECIFIC_FOOD')}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onSaveFavorite={async () => 1}
+        onDeleteHistory={onDeleteHistory}
+      />,
+    )
+    await user.hover(screen.getByRole('group'))
+    await user.click(screen.getByRole('button', { name: '대화 삭제' }))
+    await user.click(screen.getByRole('button', { name: '삭제 확인' }))
+    expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeDisabled()
+
+    await act(async () => {
+      resolveDelete()
+    })
+    expect(screen.getByRole('button', { name: '즐겨찾기에 저장' })).toBeEnabled()
+  })
+})
+
 describe('ChatView — role 기준 페어링 (정합 깨짐 방어)', () => {
   it('연속된 user 메시지를 각각 user 버블로 렌더한다 — 위치 기반 묶기로 assistant 둔갑 방지 (regression)', () => {
     // 스트림 에러 후 재전송 등으로 user 가 연달아 쌓인 상황.
