@@ -242,7 +242,9 @@ export default function ChatView({
               <DeleteHistoryControl
                 onDeleteHistory={async () => {
                   const hId = historyId ?? (await waitForHistoryId(group.assistantIdx))
-                  if (hId != null) void onDeleteHistory(hId)
+                  if (hId == null) throw new Error('historyId unavailable')
+                  // promise 를 반환해야 DeleteHistoryControl 이 await 하며 스피너를 유지한다.
+                  return onDeleteHistory(hId)
                 }}
               />
             ) : undefined
