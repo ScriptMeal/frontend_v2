@@ -59,3 +59,30 @@ describe('DeleteHistoryControl — 확인 흐름', () => {
     expect(screen.getByRole('button', { name: '삭제 확인' })).toBeInTheDocument()
   })
 })
+
+describe('DeleteHistoryControl — 동시 요청 방어', () => {
+  it('disabled 면 삭제 버튼을 비활성화하고 클릭해도 확인 영역이 열리지 않는다 (방어)', () => {
+    render(<DeleteHistoryControl onDeleteHistory={() => {}} disabled />)
+    const button = screen.getByRole('button', { name: '대화 삭제' })
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+    expect(screen.queryByText(/질문과 답변이 함께 삭제/)).not.toBeInTheDocument()
+  })
+
+  it('삭제 진행에 맞춰 onBusyChange(true→false) 를 보고한다 (방어)', async () => {
+    let release = () => {}
+    const onDeleteHistory = vi.fn(
+      () => new Promise<void>((resolve) => { release = resolve }),
+    )
+    const onBusyChange = vi.fn()
+    render(<DeleteHistoryControl onDeleteHistory={onDeleteHistory} onBusyChange={onBusyChange} />)
+    fireEvent.click(screen.getByRole('button', { name: '대화 삭제' }))
+    fireEvent.click(screen.getByRole('button', { name: '삭제 확인' }))
+
+    expect(onBusyChange).toHaveBeenCalledWith(true)
+    expect(onBusyChange).not.toHaveBeenCalledWith(false)
+    release()
+    await screen.findByRole('button', { name: '대화 삭제' })
+    expect(onBusyChange).toHaveBeenLastCalledWith(false)
+  })
+})
