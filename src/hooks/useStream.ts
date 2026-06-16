@@ -36,6 +36,11 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
 
   const send = useCallback(
     async (userMessage: string) => {
+      // 이 스트림이 시작된 세션(origin)을 캡처한다. done 이 네트워크 지연만큼 뒤로 밀리는 동안
+      // 사용자가 다른 세션으로 이동하면 store 의 currentSessionId 는 바뀌므로, 라이브 화면(store)
+      // 반영은 "여전히 origin 세션일 때만" 한다. 서버 저장(saveHistory)·사이드바·캐시는 origin
+      // 기준으로 수행해, A 의 응답이 B 화면에 새어 들지 않게 한다(재진입/새로고침 시 재하이드레이션으로 표시).
+      const originSessionId = currentSessionId
       // API history 는 "이전 턴"만 — 현재 메시지를 추가하기 전 스냅샷을 캡처
       const historySnapshot = history
       // 이번 턴 assistant 버블의 index: 스냅샷 뒤로 user(+1)·assistant 순서로 추가되므로 +1.
@@ -73,11 +78,14 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
             // 이 정리를 await saveHistory 뒤(finally)로 미루면, 네트워크 대기 동안
             // 확정 버블 + 임시 버블이 동시에 렌더돼 말풍선이 잠깐 2개로 보인다.
             // (.claude/debugging/20260608-chat-double-bubble.md 참고)
-            addMessage({ role: 'assistant', content: finalReply, intent })
+            // 단, 그 사이 다른 세션으로 이동했다면(현재 ≠ origin) 라이브 history 에 섞지 않는다.
+            if (useSessionStore.getState().currentSessionId === originSessionId) {
+              addMessage({ role: 'assistant', content: finalReply, intent })
+            }
             setIsStreaming(false)
             setStreamingText('')
             const saved = await saveHistory({
-              session_id: currentSessionId,
+              session_id: originSessionId,
               user_message: userMessage,
               recipe_reply: finalReply,
               intent,
@@ -85,10 +93,14 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
             // history_id 기록은 반드시 여기(await 이후)서만 — isStreaming 은 이미 false 라
             // 임시 버블 조건이 꺼져 있어 슬라이스 갱신 리렌더가 이중 버블을 만들지 않는다.
             if (saved) {
-              recordHistoryId(assistantIndex, saved.id)
+              // 저장 await 동안에도 세션이 바뀔 수 있으므로 다시 확인 후에만 라이브 historyIds 기록.
+              if (useSessionStore.getState().currentSessionId === originSessionId) {
+                recordHistoryId(assistantIndex, saved.id)
+              }
               // 저장분을 history 캐시에 prepend(최신순) — 세션을 떠났다 돌아오거나 새로고침해
               // 재하이드레이션할 때 방금 친 턴이 빠지지 않도록 사본을 최신으로 유지한다(A안 보강책 ②).
-              queryClient.setQueryData<HistoryRecord[]>(['history', currentSessionId], (old) => [
+              // 캐시는 세션 키별로 분리돼 있어 origin 키에 갱신하면 현재 세션과 무관하게 안전하다.
+              queryClient.setQueryData<HistoryRecord[]>(['history', originSessionId], (old) => [
                 saved,
                 ...(old ?? []),
               ])
@@ -96,7 +108,7 @@ export function useStream(deps: UseStreamDeps = {}): UseStreamReturn {
             // 매 턴 세션을 upsert — 첫 턴이면 등록, 이어쓰기면 사이드바 최상단으로 이동 +
             // preview 를 최신 user 메시지로 갱신한다(최근 활동 순). addSession 이 id 중복을 막는다.
             addSession({
-              id: currentSessionId,
+              id: originSessionId,
               createdAt: new Date().toISOString(),
               preview: userMessage,
             })
