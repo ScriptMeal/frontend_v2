@@ -57,11 +57,12 @@ describe('ChatView — 즐겨찾기 노출 조건 (intent 게이팅)', () => {
     expect(screen.getByRole('button', { name: /즐겨찾기/ })).toBeInTheDocument()
   })
 
-  it('intent 가 favoritable 이어도 history_id 가 없으면 버튼을 노출하지 않는다 (가드: POST 누락 차단)', () => {
+  it('intent 가 favoritable 이면 history_id 가 없어도 즐겨찾기 버튼을 낙관적으로 노출한다 (saveHistory 완료 전 버튼 선노출)', () => {
     render(
       <ChatView history={turn('SPECIFIC_FOOD')} onSend={() => {}} onSaveFavorite={async () => 1} />,
     )
-    expect(screen.queryByRole('button', { name: /즐겨찾기/ })).not.toBeInTheDocument()
+    // historyId 없어도 즉시 노출 — 클릭 시 waitForHistoryId 가 대기
+    expect(screen.getByRole('button', { name: /즐겨찾기/ })).toBeInTheDocument()
   })
 
   it('저장 시 turn 에 history_id 를 포함해 onSaveFavorite 를 호출한다 (happy)', async () => {
@@ -116,6 +117,15 @@ describe('ChatView — 히스토리 삭제', () => {
         onSend={() => {}}
         onDeleteHistory={() => {}}
       />,
+    )
+    await user.hover(screen.getByRole('group'))
+    expect(screen.getByRole('button', { name: '대화 삭제' })).toBeInTheDocument()
+  })
+
+  it('onDeleteHistory 가 있으면 history_id 가 없어도 삭제 버튼을 낙관적으로 노출한다 (saveHistory 완료 전 버튼 선노출)', async () => {
+    const user = userEvent.setup()
+    render(
+      <ChatView history={history} onSend={() => {}} onDeleteHistory={() => {}} />,
     )
     await user.hover(screen.getByRole('group'))
     expect(screen.getByRole('button', { name: '대화 삭제' })).toBeInTheDocument()
