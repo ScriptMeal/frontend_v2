@@ -4,6 +4,13 @@ import { Loader2, Trash2 } from 'lucide-react'
 interface Props {
   /** 이 대화 쌍(user+assistant)을 history_id 로 삭제한다. */
   onDeleteHistory: () => void | Promise<void>
+  /**
+   * 같은 쌍의 다른 동작(즐겨찾기 저장/해제)이 진행 중일 때 true.
+   * 이때 삭제 진입을 막아 DELETE history 와 POST favorite 의 동시 발사를 차단한다.
+   */
+  disabled?: boolean
+  /** 삭제 요청의 in-flight 여부를 상위에 보고한다(쌍 단위 lock 갱신용). */
+  onBusyChange?: (busy: boolean) => void
 }
 
 /**
@@ -14,7 +21,7 @@ interface Props {
  * - 확인 → onDeleteHistory 호출(성공 시 상위가 이 쌍을 제거 → 언마운트)
  * - 실패 시 확인 영역을 유지하고 "다시 시도" 안내(항목이 조용히 남는 것 방지)
  */
-export default function DeleteHistoryControl({ onDeleteHistory }: Props) {
+export default function DeleteHistoryControl({ onDeleteHistory, disabled = false, onBusyChange }: Props) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteFailed, setDeleteFailed] = useState(false)
@@ -22,6 +29,7 @@ export default function DeleteHistoryControl({ onDeleteHistory }: Props) {
   const handleConfirm = async () => {
     setIsDeleting(true)
     setDeleteFailed(false)
+    onBusyChange?.(true)
     try {
       await onDeleteHistory()
       setShowConfirm(false)
@@ -29,6 +37,7 @@ export default function DeleteHistoryControl({ onDeleteHistory }: Props) {
       setDeleteFailed(true)
     } finally {
       setIsDeleting(false)
+      onBusyChange?.(false)
     }
   }
 
@@ -77,8 +86,9 @@ export default function DeleteHistoryControl({ onDeleteHistory }: Props) {
     <button
       type="button"
       onClick={() => setShowConfirm(true)}
+      disabled={disabled}
       aria-label="대화 삭제"
-      className="flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      className="flex cursor-pointer items-center gap-1 rounded-sm px-1 text-xs text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-60 disabled:hover:text-muted-foreground"
     >
       <Trash2 className="size-3.5" />
       삭제

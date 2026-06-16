@@ -254,6 +254,64 @@ describe('useStream', () => {
     expect(useSessionStore.getState().history).toEqual([{ role: 'user', content: 'x', clientId: expect.any(String) }])
   })
 
+  describe('세션 격리 — 스트리밍 중 다른 세션으로 전환', () => {
+    // s1 에서 send 한 뒤 done 도착 전 s2 로 이동하는 상황을 모사한다.
+    // (chunk 와 done 사이에 store 의 currentSessionId 를 s2 로 바꿔 "이동"을 흉내)
+    function streamThenSwitchTo(switchTo: string) {
+      return (async function* () {
+        yield { type: 'chunk', value: '본문' } as StreamEvent
+        useSessionStore.setState({ currentSessionId: switchTo, history: [], historyIds: {} })
+        yield { type: 'done', value: '' } as StreamEvent
+      })()
+    }
+
+    it('확정 어시스턴트 버블을 현재(다른) 세션 history 에 추가하지 않는다 (버그 방어)', async () => {
+      useSessionStore.setState({ currentSessionId: 's1', history: [], historyIds: {} })
+      mocks.streamChat.mockReturnValue(streamThenSwitchTo('s2'))
+
+      const { result } = renderStream()
+      await act(async () => {
+        await result.current.send('A질문')
+      })
+
+      // s2(현재) 로 옮겨갔으므로 A 의 응답이 s2 의 라이브 history 에 새어들면 안 된다.
+      expect(useSessionStore.getState().currentSessionId).toBe('s2')
+      expect(useSessionStore.getState().history).toEqual([])
+    })
+
+    it('history_id 를 현재(다른) 세션의 historyIds 에 기록하지 않는다 (오염 방어)', async () => {
+      useSessionStore.setState({ currentSessionId: 's1', history: [], historyIds: {} })
+      mocks.saveHistory.mockResolvedValue(makeHistoryRecord({ id: 77, session_id: 's1' }))
+      mocks.streamChat.mockReturnValue(streamThenSwitchTo('s2'))
+
+      const { result } = renderStream()
+      await act(async () => {
+        await result.current.send('A질문')
+      })
+
+      expect(useSessionStore.getState().historyIds).toEqual({})
+    })
+
+    it('saveHistory·history 캐시는 시작 세션(origin=s1) 기준으로 유지한다 (서버·재방문 정합)', async () => {
+      useSessionStore.setState({ currentSessionId: 's1', history: [], historyIds: {} })
+      mocks.saveHistory.mockResolvedValue(makeHistoryRecord({ id: 88, session_id: 's1' }))
+      mocks.streamChat.mockReturnValue(streamThenSwitchTo('s2'))
+
+      const { result, queryClient } = renderStream()
+      await act(async () => {
+        await result.current.send('A질문')
+      })
+
+      // 서버 저장은 origin(s1) 으로
+      expect(mocks.saveHistory).toHaveBeenCalledWith(
+        expect.objectContaining({ session_id: 's1', user_message: 'A질문' }),
+      )
+      // 캐시도 origin(s1) 키에만 — 이동해 간 s2 캐시는 건드리지 않는다
+      expect(queryClient.getQueryData(['history', 's1'])).toHaveLength(1)
+      expect(queryClient.getQueryData(['history', 's2'])).toBeUndefined()
+    })
+  })
+
   it('의존성 주입(deps) 시 기본 import 대신 주입된 streamChat·saveHistory 를 쓴다 (DI)', async () => {
     const injectedStream = vi
       .fn()

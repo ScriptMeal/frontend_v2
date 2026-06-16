@@ -74,6 +74,16 @@ describe('ChatPairContextMenu', () => {
     expect(await screen.findByTestId('contextmenu-delete-spinner')).toBeInTheDocument()
   })
 
+  it('즐겨찾기 처리 중에는 삭제하기 버튼을 비활성화한다 (동시 요청 방어)', async () => {
+    const user = userEvent.setup()
+    const onToggleFavorite = vi.fn(() => new Promise<void>(() => {})) // 미해결 — pending 유지
+    render(<ChatPairContextMenu {...baseProps} onToggleFavorite={onToggleFavorite} />)
+
+    await user.click(screen.getByRole('button', { name: '즐겨찾기' }))
+    // 즐겨찾기 in-flight 동안 삭제 진입(삭제하기)이 막혀야 한다.
+    expect(screen.getByRole('button', { name: '삭제하기' })).toBeDisabled()
+  })
+
   it('백드롭 클릭 시 닫는다 (edge)', async () => {
     const onClose = vi.fn()
     const user = userEvent.setup()

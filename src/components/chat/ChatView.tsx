@@ -123,6 +123,21 @@ export default function ChatView({
   const coarse = useCoarsePointer()
   const [activeMenu, setActiveMenu] = useState<ActiveMenu | null>(null)
 
+  // 쌍 단위 동작 lock — 같은 대화 쌍(pairKey)에 대해 즐겨찾기 토글과 대화 삭제가 동시에
+  // in-flight 되는 것을 막는다. 한쪽이 busy 면 반대편 버튼을 disabled 로 내려 DELETE history 와
+  // POST favorite 가 동시에 발사돼 백엔드 FK/트랜잭션 충돌을 일으키는 것을 차단한다(진행 중 동작 우선).
+  const [lockedPairs, setLockedPairs] = useState<Record<string, 'favorite' | 'delete'>>({})
+  const setPairLock = (key: string, kind: 'favorite' | 'delete', busy: boolean) => {
+    setLockedPairs((prev) => {
+      if (busy) return { ...prev, [key]: kind }
+      // 다른 동작이 점유 중이면 건드리지 않는다(자신이 건 lock 만 해제).
+      if (prev[key] !== kind) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
   // 모바일 즐겨찾기 상태(historyId → favorite_id). 컨텍스트 메뉴와 말풍선 별 표시의 단일 소스.
   // 서버 스냅샷(favoritedMap)으로 시드하고, 메뉴 액션으로 갱신한다(데스크톱 footer 경로와 분리).
   const [mobileSaved, setMobileSaved] = useState<Record<number, number | null>>(() =>
@@ -238,8 +253,12 @@ export default function ChatView({
 
             // 데스크톱: 기존 hover 푸터(즐겨찾기 버튼 + 삭제 컨트롤) 유지.
             // historyId 가 없으면(saveHistory 완료 전) waitForHistoryId 가 대기 후 API 호출.
+            // lock: 같은 쌍의 즐겨찾기가 진행 중이면 삭제를 막고, 삭제가 진행 중이면 즐겨찾기를 막는다.
+            const pairLock = lockedPairs[pairKey]
             const deleteControl = onDeleteHistory ? (
               <DeleteHistoryControl
+                disabled={pairLock === 'favorite'}
+                onBusyChange={(busy) => setPairLock(pairKey, 'delete', busy)}
                 onDeleteHistory={async () => {
                   const hId = historyId ?? (await waitForHistoryId(group.assistantIdx))
                   if (hId == null) throw new Error('historyId unavailable')
@@ -277,6 +296,8 @@ export default function ChatView({
                     initialFavoriteId={initialFavoriteId}
                     onSaveFavorite={saveHandler}
                     onDeleteFavorite={onDeleteFavorite}
+                    favoriteDisabled={pairLock === 'delete'}
+                    onBusyChange={(busy) => setPairLock(pairKey, 'favorite', busy)}
                     footerAction={deleteControl}
                   />
                 }

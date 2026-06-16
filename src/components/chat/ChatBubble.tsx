@@ -24,6 +24,13 @@ interface Props {
   onSaveFavorite?: () => Promise<number>
   /** 저장된 즐겨찾기를 해제(삭제)한다. 저장 시 받은 id 로 호출된다. */
   onDeleteFavorite?: (id: number) => void | Promise<void>
+  /**
+   * 같은 쌍의 다른 동작(대화 삭제)이 진행 중일 때 true.
+   * 이때 즐겨찾기 토글을 막아 POST favorite 와 DELETE history 의 동시 발사를 차단한다.
+   */
+  favoriteDisabled?: boolean
+  /** 즐겨찾기 토글(저장·해제)의 in-flight 여부를 상위에 보고한다(쌍 단위 lock 갱신용). */
+  onBusyChange?: (busy: boolean) => void
   /** 즐겨찾기 버튼 옆(푸터)에 나란히 렌더할 추가 액션(예: 대화 삭제). assistant 버블 전용. */
   footerAction?: React.ReactNode
   /**
@@ -40,6 +47,8 @@ export default function ChatBubble({
   initialFavoriteId,
   onSaveFavorite,
   onDeleteFavorite,
+  favoriteDisabled = false,
+  onBusyChange,
   footerAction,
   saved = false,
 }: Props) {
@@ -61,8 +70,9 @@ export default function ChatBubble({
   const isSaved = favoriteId !== null
 
   const handleToggle = async () => {
-    if (pending || !onSaveFavorite) return
+    if (pending || favoriteDisabled || !onSaveFavorite) return
     setPending(true)
+    onBusyChange?.(true)
     try {
       if (favoriteId === null) {
         const id = await onSaveFavorite()
@@ -75,6 +85,7 @@ export default function ChatBubble({
       // 저장/삭제 실패: 상태를 바꾸지 않는다(중복 400 등은 상위에서 토스트로 안내).
     } finally {
       setPending(false)
+      onBusyChange?.(false)
     }
   }
 
@@ -99,7 +110,7 @@ export default function ChatBubble({
             <button
               type="button"
               onClick={handleToggle}
-              disabled={pending}
+              disabled={pending || favoriteDisabled}
               aria-label={isSaved ? '즐겨찾기 해제' : '즐겨찾기에 저장'}
               aria-pressed={isSaved}
               aria-busy={pending}
