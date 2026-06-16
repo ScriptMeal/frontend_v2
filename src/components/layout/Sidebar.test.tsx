@@ -49,6 +49,13 @@ describe('Sidebar', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/home')
   })
 
+  it('LARA 로고 클릭 시 랜딩(/) 으로 이동한다', async () => {
+    const user = userEvent.setup()
+    renderSidebar()
+    await user.click(screen.getByRole('button', { name: 'LARA' }))
+    expect(mockNavigate).toHaveBeenCalledWith('/')
+  })
+
   it('즐겨찾기 클릭 시 즐겨찾기 페이지로 이동한다', async () => {
     const user = userEvent.setup()
     renderSidebar()

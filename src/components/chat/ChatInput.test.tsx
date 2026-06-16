@@ -43,4 +43,12 @@ describe('ChatInput', () => {
     expect(screen.getByLabelText('메시지 입력')).toBeDisabled()
     expect(screen.getByRole('button', { name: '전송' })).toBeDisabled()
   })
+
+  it('모바일에서 iOS 자동 확대를 막도록 입력 폰트를 16px(text-base)로 둔다 (iOS)', () => {
+    render(<ChatInput onSubmit={() => {}} />)
+    const textarea = screen.getByLabelText('메시지 입력')
+    // iOS Safari 는 폰트 16px 미만 입력에 포커스하면 화면을 확대한다 → 모바일 16px, sm+ 14px
+    expect(textarea).toHaveClass('text-base')
+    expect(textarea).toHaveClass('sm:text-sm')
+  })
 })

@@ -51,6 +51,14 @@ describe('AppLayout', () => {
     expect(useUIStore.getState().isSidebarOpen).toBe(false)
   })
 
+  it('모바일 슬라이드가 동작하도록 transition 에 translate 를 포함한다 (iOS)', () => {
+    // Tailwind v4 는 -translate-x-full 을 CSS translate 속성으로 컴파일한다.
+    // transition 에 translate 가 없으면 모바일 드로어가 점프한다(iOS 슬라이드 미동작).
+    renderLayout()
+    const aside = screen.getByRole('complementary')
+    expect(aside.className).toContain('transition-[translate,width]')
+  })
+
   it('사이드바가 열린 상태에서 ESC 로 닫는다 (a11y)', async () => {
     const user = userEvent.setup()
     useUIStore.setState({ isSidebarOpen: true })

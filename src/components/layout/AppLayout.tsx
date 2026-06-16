@@ -42,7 +42,9 @@ export default function AppLayout({ children }: Props) {
       {/* 사이드바: 데스크톱 인-플로우(접으면 width 0) / 모바일 오버레이(fixed + slide) */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 w-[260px] overflow-hidden transition-[transform,width] duration-200 ease-out lg:static lg:z-auto lg:translate-x-0',
+          // Tailwind v4 는 translate 유틸을 CSS translate 속성으로 컴파일하므로 transition 에 translate 를 포함한다.
+          // (transform 만 두면 모바일 드로어 슬라이드가 transition 되지 않아 점프한다 — iOS)
+          'fixed inset-y-0 left-0 z-40 w-[260px] overflow-hidden transition-[translate,width] duration-200 ease-out lg:static lg:z-auto lg:translate-x-0',
           isSidebarOpen ? 'translate-x-0 lg:w-[260px]' : '-translate-x-full lg:w-0',
         )}
       >
