@@ -160,6 +160,29 @@ describe('ChatView — 히스토리 삭제', () => {
     fireEvent.click(screen.getByRole('button', { name: '삭제 확인' }))
     expect(onDeleteHistory).toHaveBeenCalledWith(10)
   })
+
+  it('삭제 확인 후 onDeleteHistory 가 진행 중이면 스피너를 노출한다 (로딩 표시 — void 누락 회귀 차단)', async () => {
+    const user = userEvent.setup()
+    let resolveDelete!: () => void
+    const onDeleteHistory = vi.fn(
+      () => new Promise<void>((resolve) => { resolveDelete = resolve }),
+    )
+    render(
+      <ChatView
+        history={history}
+        historyIds={{ 1: 10 }}
+        onSend={() => {}}
+        onDeleteHistory={onDeleteHistory}
+      />,
+    )
+    await user.hover(screen.getByRole('group'))
+    await user.click(screen.getByRole('button', { name: '대화 삭제' }))
+    await user.click(screen.getByRole('button', { name: '삭제 확인' }))
+
+    // onDeleteHistory 의 promise 가 아직 resolve 되지 않은 동안 스피너가 떠 있어야 한다.
+    expect(await screen.findByTestId('delete-spinner')).toBeInTheDocument()
+    resolveDelete()
+  })
 })
 
 describe('ChatView — role 기준 페어링 (정합 깨짐 방어)', () => {
