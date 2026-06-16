@@ -27,9 +27,13 @@ export default function Sidebar() {
     <div className="flex h-full flex-col border-r border-hairline bg-sidebar">
       {/* 브랜드 + 접기 */}
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
-        <span className="text-base font-semibold tracking-tight text-foreground">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="cursor-pointer rounded-sm text-base font-semibold tracking-tight text-foreground transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
           LARA
-        </span>
+        </button>
         <Button
           variant="ghost"
           size="icon-sm"
